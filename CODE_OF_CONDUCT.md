@@ -1,14 +1,18 @@
-# 🌈 Code de Conduite
+# 🧬 Code de conduite — NeuroSolv
 
-Ce projet vise à être bienveillant, inclusif et ouvert.  
-Toute personne est bienvenue tant qu’elle respecte les autres membres.
+NeuroSolv est un espace d’exploration libre, bienveillant et ouvert.
 
-## Interdits :
-- Comportement hostile ou discriminant
-- Publicité déguisée ou parasitage
-- Appropriation de code sans mention
+## 💡 Principes
+- Respect mutuel
+- Ouverture à toutes les visions
+- Pas de toxicité, ni moquerie
 
-## En cas de problème :
-Contact : rkocupyr@gmail.com
+## ⚠️ Interdits
+- Discrimination, harcèlement, exclusion
+- Appropriation de code non crédité
+- Spam ou communication agressive
 
-Merci 🙏 d’aider à faire de NeuroSolv un espace d’exploration libre et respectueux 🌍
+## 🚑 Contact
+En cas de problème, écris à : rkocupyr@gmail.com
+
+Ensemble, on rend l’IA et la science plus humaines 🌍
