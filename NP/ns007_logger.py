@@ -1,5 +1,15 @@
-# ns007_logger.py
+"""
+ns007_logger.py
 
+✅ branche le solveur temps réel
+✅ enregistre chaque session EEG
+✅ génère des GIFs de visualisation
+✅ ajoute l’interprétabilité XAI live
+
+Auteur : Kocupyr Romain
+Dev    : multi_gpt_api, Grok3
+Licence : Creative Commons BY-NC-SA 4.0
+"""
 
 import os
 import json
