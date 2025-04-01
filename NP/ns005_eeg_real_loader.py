@@ -15,7 +15,9 @@ Auteur : Kocupyr Romain
 Dev    : multi_gpt_api, Grok3
 Licence : Creative Commons BY-NC-SA 4.0
 
-Commande: python ns005_eeg_real_loader.py --h5 <eeg_data_....h5> --topn 10
+Commande: python ns005_eeg_real_loader.py --h5 eeg_data_alzheimer_99_id.h5 \
+  --topn 10 --json --graph --live
+
 """
 
 import os
