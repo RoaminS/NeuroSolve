@@ -1,0 +1,14 @@
+numpy
+scipy
+pandas
+matplotlib
+seaborn
+scikit-learn
+torch
+mne
+networkx
+plotly
+imageio
+tqdm
+kaleido
+openpyxl
