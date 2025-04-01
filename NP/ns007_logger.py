@@ -6,6 +6,17 @@ ns007_logger.py
 ✅ génère des GIFs de visualisation
 ✅ ajoute l’interprétabilité XAI live
 
+✅ Résultats
+À la fin tu obtiens :
+
+🎞️ Un fichier np_solver_eeg.gif montrant toutes les résolutions
+
+📁 Un dossier neurosolv_sessions/ avec :
+
+session_001.json … session_012.json
+
+Les frames PNG intermédiaires
+
 Auteur : Kocupyr Romain
 Dev    : multi_gpt_api, Grok3
 Licence : Creative Commons BY-NC-SA 4.0
