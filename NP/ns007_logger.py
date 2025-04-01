@@ -21,7 +21,6 @@ Auteur : Kocupyr Romain
 Dev    : multi_gpt_api, Grok3
 Licence : Creative Commons BY-NC-SA 4.0
 """
-
 import os
 import json
 import time
@@ -31,7 +30,6 @@ import imageio
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
-from mne_realtime import LSLClient
 from ns001_neuro_np_solver import solve_np_problem
 from ns003_visualizer import plot_solution_2d, plot_solution_3d
 
@@ -40,38 +38,18 @@ SESSION_DIR = "neurosolv_sessions"
 os.makedirs(SESSION_DIR, exist_ok=True)
 SAMPLES = 512
 NUM_CHANNELS = 19
-GIF_FRAME_DIR = os.path.join(SESSION_DIR, "frames")
-os.makedirs(GIF_FRAME_DIR, exist_ok=True)
+FRAME_DIR_2D = os.path.join(SESSION_DIR, "frames_2d")
+FRAME_DIR_3D = os.path.join(SESSION_DIR, "frames_3d")
+os.makedirs(FRAME_DIR_2D, exist_ok=True)
+os.makedirs(FRAME_DIR_3D, exist_ok=True)
 
-# === Simulated EEG loader or real-time plugin (replace with real in ns006)
-def simulate_eeg_segment():
-    np.random.seed()
-    eeg = np.random.normal(0, 1, size=(SAMPLES, NUM_CHANNELS))
-    eeg += np.sin(np.linspace(0, 10*np.pi, SAMPLES)).reshape(-1, 1)  # bruit + pattern
-    return eeg
-
-# === Real-time plugin live
-def get_real_eeg_segment():
-    # Connecte au flux EEG LSL (ex : OpenBCI, Muse, etc.)
-    client = LSLClient(info=None, host='localhost', port=1972)
-    client.start()
-
-    print("🔌 Lecture en cours...")
-    raw = client.get_data_as_epoch(n_samples=512)  # (512, 19)
-    client.stop()
-
-    return raw.T  # shape: (512, 19)
-
-# === Import depuis un fichier existant (ex .set, .edf, .fif)
+# === EEG réel depuis fichier (OpenBCI, Muse, etc.)
 def get_real_eeg_segment_from_file(path):
-    raw = mne.io.read_raw_eeglab(path, preload=True)
+    raw = mne.io.read_raw_eeglab(path, preload=True, verbose=False)
     raw.pick_types(eeg=True)
     raw.filter(0.5, 45)
     raw.resample(128)
-
-    segment = raw.get_data()[:, :512].T  # (512, N_channels)
-    return segment  # shape: (512, 19) adapté
-
+    return raw.get_data()[:, :512].T  # shape (512, 19)
 
 # === Sauvegarde JSON brute + solution
 def save_session_json(data, solution, meta, path):
@@ -85,23 +63,31 @@ def save_session_json(data, solution, meta, path):
         json.dump(session_data, f, indent=2)
 
 # === Animation .gif avec matplotlib
-def generate_gif_from_frames(frames, outpath, duration=0.5):
+def generate_gif(frames, outpath, duration=0.5):
     images = [imageio.imread(f) for f in frames]
     imageio.mimsave(outpath, images, duration=duration)
     print(f"🎞️ GIF exporté : {outpath}")
 
-# === LIVE LOGGER LOOP
-def live_session(n_loops=5):
-    print(f"\n🧠 Lancement session EEG x NP | frames={n_loops}")
+# === Index HTML de toutes les sessions
+def generate_html_index():
+    files = sorted([f for f in os.listdir(SESSION_DIR) if f.endswith(".json")])
+    with open(os.path.join(SESSION_DIR, "log_index.html"), "w") as f:
+        f.write("<html><head><title>Sessions EEG</title></head><body><h1>🧠 Sessions EEG Résolues</h1><ul>")
+        for file in files:
+            f.write(f'<li><a href="{file}">{file}</a></li>')
+        f.write("</ul></body></html>")
+    print("📁 HTML index généré : log_index.html")
 
-    frame_paths = []
-    all_logs = []
+# === SESSION LOOP
+def live_session(eeg_file, n_loops=5):
+    frame_paths_2d, frame_paths_3d = [], []
+    print(f"\n🧠 Lancement session temps réel | Source: {eeg_file}")
 
     for i in range(n_loops):
-        print(f"\n📦 Fenêtre EEG #{i+1}")
+        print(f"\n📦 EEG #{i+1}")
 
-        # === 1. Simuler un EEG ou charger un vrai
-        eeg_seg = simulate_eeg_segment()
+        # === 1. Charger segment EEG réel
+        eeg_seg = get_real_eeg_segment_from_file(eeg_file)
         eeg_vector = np.mean(np.abs(eeg_seg), axis=0) * 100
         eeg_vector = eeg_vector.astype(int).tolist()
 
@@ -110,28 +96,32 @@ def live_session(n_loops=5):
 
         # === 2. Résolution NP
         solution, meta = solve_np_problem(eeg_vector, target, algo="brute", return_meta=True)
-        print(f"✅ Solution: {solution}" if solution else "❌ No solution found.")
+        print(f"✅ Solution trouvée: {solution}" if solution else "❌ Aucune solution.")
 
-        # === 3. Visualisation 2D + sauvegarde
-        fig_path = os.path.join(GIF_FRAME_DIR, f"frame_{i:03d}.png")
-        plot_solution_2d(eeg_vector, solution, title=f"EEG NP Solve #{i+1}", save_path=fig_path)
-        frame_paths.append(fig_path)
+        # === 3. Sauvegarde graphique 2D
+        fig_2d = os.path.join(FRAME_DIR_2D, f"frame2d_{i:03d}.png")
+        plot_solution_2d(eeg_vector, solution, title=f"EEG NP Solve #{i+1}", save_path=fig_2d)
+        frame_paths_2d.append(fig_2d)
 
-        # === 4. Logging JSON
+        # === 4. Sauvegarde graphique 3D
+        fig_3d = os.path.join(FRAME_DIR_3D, f"frame3d_{i:03d}.png")
+        plot_solution_3d(eeg_vector, solution, title=f"EEG NP Solve #{i+1}", save_path=fig_3d)
+        frame_paths_3d.append(fig_3d)
+
+        # === 5. Logging JSON
         json_path = os.path.join(SESSION_DIR, f"session_{i+1:03d}.json")
         save_session_json(eeg_vector, solution, meta, json_path)
-        all_logs.append(json_path)
 
         time.sleep(0.5)
 
-    # === 5. Création du GIF final
-    gif_path = os.path.join(SESSION_DIR, "np_solver_eeg.gif")
-    generate_gif_from_frames(frame_paths, gif_path)
+    # === 6. GIFs
+    generate_gif(frame_paths_2d, os.path.join(SESSION_DIR, "np_solver_2d.gif"))
+    generate_gif(frame_paths_3d, os.path.join(SESSION_DIR, "np_solver_3d.gif"))
 
-    print(f"\n📁 Session complète enregistrée ({len(all_logs)} fenêtres)")
-    print(f"📚 JSON logs : {all_logs[-1]}")
-    print(f"🎬 GIF : {gif_path}")
+    # === 7. Générer l’index HTML
+    generate_html_index()
 
 # === MAIN
 if __name__ == "__main__":
-    live_session(n_loops=12)
+    EEG_FILE = "eeg_samples/subject_01.set"  # Remplace par ton fichier EEG réel
+    live_session(eeg_file=EEG_FILE, n_loops=8)
