@@ -30,6 +30,7 @@ import imageio
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
+from pylsl import StreamInlet, resolve_stream
 from ns001_neuro_np_solver import solve_np_problem
 from ns003_visualizer import plot_solution_2d, plot_solution_3d
 
@@ -42,6 +43,22 @@ FRAME_DIR_2D = os.path.join(SESSION_DIR, "frames_2d")
 FRAME_DIR_3D = os.path.join(SESSION_DIR, "frames_3d")
 os.makedirs(FRAME_DIR_2D, exist_ok=True)
 os.makedirs(FRAME_DIR_3D, exist_ok=True)
+
+
+# === Temps réel via LSL
+def get_real_eeg_segment_lsl():
+    print("🔍 Recherche d'un flux EEG LSL...")
+    streams = resolve_stream('type', 'EEG')
+    inlet = StreamInlet(streams[0])
+    print("✅ Flux EEG détecté.")
+
+    eeg_buffer = []
+    while len(eeg_buffer) < 512:
+        sample, _ = inlet.pull_sample()
+        eeg_buffer.append(sample[:NUM_CHANNELS])  # garde uniquement les 19 premiers
+
+    eeg_data = np.array(eeg_buffer)  # shape (512, 19)
+    return eeg_data
 
 # === EEG réel depuis fichier (OpenBCI, Muse, etc.)
 def get_real_eeg_segment_from_file(path):
@@ -78,6 +95,33 @@ def generate_html_index():
         f.write("</ul></body></html>")
     print("📁 HTML index généré : log_index.html")
 
+# === Générer un tableau HTML auto-rafraîchissant
+def generate_live_dashboard():
+    html = f"""
+    <html>
+    <head>
+        <meta http-equiv="refresh" content="5">
+        <title>🧠 NeuroSolv Live</title>
+        <style>
+            body {{ font-family: Arial; padding: 20px; }}
+            h1 {{ color: #333; }}
+            img {{ max-width: 100%; }}
+        </style>
+    </head>
+    <body>
+        <h1>🧠 Dernière session EEG + Résolution NP</h1>
+        <p>Mis à jour automatiquement toutes les 5 secondes.</p>
+        <h2>Graphique 2D</h2>
+        <img src="np_solver_2d.gif" alt="2D Graph">
+        <h2>Graphique 3D</h2>
+        <img src="np_solver_3d.gif" alt="3D Graph">
+    </body>
+    </html>
+    """
+    with open(os.path.join(SESSION_DIR, "live_plot.html"), "w") as f:
+        f.write(html)
+    print("📡 Dashboard temps réel : live_plot.html")
+
 # === SESSION LOOP
 def live_session(eeg_file, n_loops=5):
     frame_paths_2d, frame_paths_3d = [], []
@@ -88,6 +132,9 @@ def live_session(eeg_file, n_loops=5):
 
         # === 1. Charger segment EEG réel
         eeg_seg = get_real_eeg_segment_from_file(eeg_file)
+        # eeg_seg = simulate_eeg_segment()
+        eeg_seg = get_real_eeg_segment_lsl()
+
         eeg_vector = np.mean(np.abs(eeg_seg), axis=0) * 100
         eeg_vector = eeg_vector.astype(int).tolist()
 
@@ -117,9 +164,11 @@ def live_session(eeg_file, n_loops=5):
     # === 6. GIFs
     generate_gif(frame_paths_2d, os.path.join(SESSION_DIR, "np_solver_2d.gif"))
     generate_gif(frame_paths_3d, os.path.join(SESSION_DIR, "np_solver_3d.gif"))
-
+    
     # === 7. Générer l’index HTML
+    generate_live_dashboard()  # ✅ nouveau
     generate_html_index()
+
 
 # === MAIN
 if __name__ == "__main__":
