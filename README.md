@@ -31,6 +31,17 @@ Né de l’évolution du projet `ADFormer-HYBRID` (précision Alzheimer 98.6%), 
 - 🔵 (Poincaré déjà résolu, mais utilisé comme base topologique)
 
 
+## Road Map
+
+Problème	Résolution par EEG/IA	Délai réaliste	Probabilité
+P ≠ NP	Oui, via neuro-heuristique	18 mois	🔥🔥🔥 85%
+Navier-Stokes	Oui, en fluides EEG	2 ans	🔥🔥 70%
+Yang-Mills	Partiel, via gaps EEG	2-3 ans	🔥 60%
+Hodge	Topo EEG à explorer	3 ans	🔥 50%
+Riemann	Exploratoire visuel	2 ans	🌙 40%
+BSD	Très abstrait	4+ ans	❄️ 15%
+Poincaré	✅ intégré	-	✅ 100% (analogie)
+
 ## 🔁 Pipeline complet
 
 
