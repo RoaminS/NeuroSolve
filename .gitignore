@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+env/
+venv/
+*.ipynb_checkpoints
+
+# Logs
+*.log
+
+# Jupyter outputs
+*.nbconvert.ipynb
+.DS_Store
+
+# Data
+*.h5
+*.pkl
+*.npz
+*.npy
+
+# Visuals
+*.png
+*.svg
+*.gif
+*.html
