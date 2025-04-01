@@ -12,6 +12,8 @@ ns001_neuro_np_solver.py — NP Solver EEG-driven
 Auteur  : Kocupyr Romain
 Dev     : multi_gpt_api, Grok3
 Licence : Creative Commons BY-NC-SA 4.0
+Commande: python ns001_neuro_np_solver.py --json ns005_output/eeg_vectors_ns001.json --show_graph
+
 """
 
 import json
