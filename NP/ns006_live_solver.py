@@ -1,6 +1,8 @@
 # ns006_live_solver.py
+Auteur : Kocupyr Romain
+Dev    : multi_gpt_api, Grok3
+Licence : Creative Commons BY-NC-SA 4.0
 
-# Licence : Creative Commons BY-NC-SA 4.0
 
 import mne
 import numpy as np
