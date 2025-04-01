@@ -26,10 +26,12 @@ import os
 import json
 import time
 import h5py
+import mne
 import imageio
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
+from mne_realtime import LSLClient
 from ns001_neuro_np_solver import solve_np_problem
 from ns003_visualizer import plot_solution_2d, plot_solution_3d
 
@@ -47,6 +49,29 @@ def simulate_eeg_segment():
     eeg = np.random.normal(0, 1, size=(SAMPLES, NUM_CHANNELS))
     eeg += np.sin(np.linspace(0, 10*np.pi, SAMPLES)).reshape(-1, 1)  # bruit + pattern
     return eeg
+
+# === Real-time plugin live
+def get_real_eeg_segment():
+    # Connecte au flux EEG LSL (ex : OpenBCI, Muse, etc.)
+    client = LSLClient(info=None, host='localhost', port=1972)
+    client.start()
+
+    print("🔌 Lecture en cours...")
+    raw = client.get_data_as_epoch(n_samples=512)  # (512, 19)
+    client.stop()
+
+    return raw.T  # shape: (512, 19)
+
+# === Import depuis un fichier existant (ex .set, .edf, .fif)
+def get_real_eeg_segment_from_file(path):
+    raw = mne.io.read_raw_eeglab(path, preload=True)
+    raw.pick_types(eeg=True)
+    raw.filter(0.5, 45)
+    raw.resample(128)
+
+    segment = raw.get_data()[:, :512].T  # (512, N_channels)
+    return segment  # shape: (512, 19) adapté
+
 
 # === Sauvegarde JSON brute + solution
 def save_session_json(data, solution, meta, path):
