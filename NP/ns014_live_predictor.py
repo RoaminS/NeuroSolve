@@ -122,6 +122,9 @@ def live_loop(mode="lsl", gui=False, save_gif=False):
         if i % 5 == 0:
             shap_explain_live(segment, model, scaler)
 
+        if prob[1] > THRESHOLD:
+            print("⚠️ Alerte cognitive détectée")
+
 
         # Streamlit ou terminal
         if gui:
