@@ -25,7 +25,10 @@ from ns001_neuro_np_solver import subset_sum_solver, SolverConfig
 
 # === CONFIG
 EEG_JSON = "ns005_output/eeg_vectors_ns001.json"
-OUTPUT_CSV = "benchmark_results.csv"
+RESULTS_DIR = "benchmark_results"
+os.makedirs(RESULTS_DIR, exist_ok=True)
+OUTPUT_CSV = os.path.join(RESULTS_DIR, "benchmark_results.csv")
+
 TARGET_OFFSET = 10
 MAX_DEPTH = 5000
 STRATEGIES = ["brute", "guided", "random"]
@@ -112,7 +115,7 @@ def main():
     plt.xlabel("Stratégie")
     plt.ylabel("Vecteur EEG")
     plt.tight_layout()
-    plt.savefig("benchmark_matrix.png")
+    plt.savefig(os.path.join(RESULTS_DIR, "benchmark_matrix.png"))
     print("📊 Matrice stratégie × EEG : benchmark_matrix.png")
 
 
