@@ -12,3 +12,4 @@ imageio
 tqdm
 kaleido
 openpyxl
+playsound
