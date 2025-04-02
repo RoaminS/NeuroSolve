@@ -82,13 +82,25 @@ def run_model(df, wavelets=None):
     clf.fit(X_train, y_train)
     y_pred = clf.predict(X_test)
     y_prob = clf.predict_proba(X_test)[:, 1] if len(np.unique(y)) == 2 else None
-
  
+
     models = {
         "RandomForest": RandomForestClassifier(n_estimators=150, random_state=0),
         "XGBoost": XGBClassifier(use_label_encoder=False, eval_metric='logloss'),
         "LightGBM": LGBMClassifier()
     }
+
+        # === Sauvegarde du modèle entraîné
+    import pickle
+    model_path = os.path.join(OUTPUT_DIR, "model.pkl")
+    with open(model_path, "wb") as f:
+        pickle.dump(clf, f)
+    print(f"💾 Modèle sauvegardé : {model_path}")
+
+    # === Sauvegarde du scaler
+    np.savez(os.path.join(OUTPUT_DIR, "model_scaler.npz"), scaler=scaler)
+    print("💾 Scaler sauvegardé : model_scaler.npz")
+
 
     scores = []
 
