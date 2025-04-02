@@ -12,5 +12,5 @@ imageio
 tqdm
 kaleido
 openpyxl
-playsound
 streamlit
+# playsound
