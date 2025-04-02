@@ -105,10 +105,22 @@ def live_loop(mode="lsl", gui=False, save_gif=False):
         pred, prob = predict_segment(model, scaler, segment)
 
         print(f"[{t}s] ▶️ Classe prédite : {pred} | Proba : {np.round(prob, 3)}")
-        predictions.append([t, pred, *prob])
-
+        timestamp = time.time()
+        subject_id = "subject_01"  # ou dynamiquement depuis EEG si possible
         
-        shap_explain_live(segment, model, scaler)
+        predictions.append({
+            "subject": subject_id,
+            "iteration": i,
+            "time_sec": t,
+            "timestamp": timestamp,
+            "prediction": int(pred),
+            "prob_class_0": float(prob[0]),
+            "prob_class_1": float(prob[1]) if len(prob) > 1 else 0
+        })
+        
+
+        if i % 5 == 0:
+            shap_explain_live(segment, model, scaler)
 
 
         # Streamlit ou terminal
@@ -130,9 +142,16 @@ def live_loop(mode="lsl", gui=False, save_gif=False):
         time.sleep(PREDICTION_INTERVAL)
 
     # Export .csv
-    df = pd.DataFrame(predictions, columns=["time_sec", "prediction", "prob0", "prob1"])
+    df = pd.DataFrame(predictions)
     df.to_csv(RESULTS_CSV, index=False)
     print(f"📁 Prédictions sauvegardées : {RESULTS_CSV}")
+    
+    # === JSON LOG
+    import json
+    with open("predictions_log.json", "w") as f:
+        json.dump(predictions, f, indent=2)
+    print("🧾 Log JSON sauvegardé : predictions_log.json")
+
 
     # GIF output
     if save_gif:
