@@ -21,7 +21,7 @@ import pandas as pd
 import mne
 import time
 from pylsl import StreamInlet, resolve_stream
-
+from ns032_shap_live import shap_explain_live
 import matplotlib.pyplot as plt
 from scipy.signal import welch
 from ripser import ripser
@@ -106,6 +106,10 @@ def live_loop(mode="lsl", gui=False, save_gif=False):
 
         print(f"[{t}s] ▶️ Classe prédite : {pred} | Proba : {np.round(prob, 3)}")
         predictions.append([t, pred, *prob])
+
+        
+        shap_explain_live(segment, model, scaler)
+
 
         # Streamlit ou terminal
         if gui:
