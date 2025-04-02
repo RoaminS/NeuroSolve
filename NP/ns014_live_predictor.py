@@ -139,6 +139,12 @@ def live_loop(mode="lsl", gui=False, save_gif=False):
             import streamlit as st
             st.line_chart(predictions)
 
+        if predictions[-1]["alert"]:
+            st.warning("⚠️ Alerte cognitive déclenchée !")
+        else:
+            st.success("✅ Activité normale")
+
+
         # GIF generation
         if save_gif:
             plt.figure(figsize=(6, 3))
