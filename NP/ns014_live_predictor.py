@@ -20,6 +20,7 @@ import numpy as np
 import pandas as pd
 import mne
 import time
+from playsound import playsound
 from pylsl import StreamInlet, resolve_stream
 from ns032_shap_live import shap_explain_live
 import matplotlib.pyplot as plt
@@ -126,8 +127,9 @@ def live_loop(mode="lsl", gui=False, save_gif=False):
 
         
         if prob[1] > THRESHOLD:
-            print("⚠️ Alerte cognitive détectée")
+            print("🔔⚠️ Alerte cognitive détectée ! Probabilité classe 1 :", round(prob[1], 3))
             predictions[-1]["alert"] = True
+            playsound("assets/alert_sound.mp3")
         else:
             predictions[-1]["alert"] = False
 
