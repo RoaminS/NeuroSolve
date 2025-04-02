@@ -9,16 +9,21 @@
 | Fichier | Fonction principale |
 |--------|---------------------|
 | `ns001_neuro_np_solver.py` | Solveur NP de base (subset sum / vertex cover) |
-| `ns002_eeg_guided_solver.py` | Stratégie guidée par vecteurs EEG simulés ou réels |
-| `ns003_visualizer.py` | Visualisation des explorations : graphe 2D/3D/GraphML |
-| `ns004_solver_xai.py` | Interprétabilité XAI des chemins de résolution |
-| `ns005_eeg_real_loader.py` | Chargement EEG réel depuis HDF5 pour NP Solver |
-| `ns006_live_solver.py` | Solveur NP en temps réel depuis un flux EEG |
-| `ns007_logger.py` | Enregistrement de sessions EEG + log + GIF |
-| `ns008_riemann_explorer.py` | Mapping EEG ↔ zéros de la fonction zêta de Riemann |
-| `ns009_topo_wavelet.py` | Analyse topologique + ondelettes par canal EEG |
-| `ns00X_topo_mapper.py` | Fusion TDA multi-échelles & cartographie EEG |
-| `ns999_benchmark.py` | Comparaison brute vs guided vs random avec stats & dashboard |
+| `ns002_eeg_guided_solver.py` | Résolution guidée par heuristique EEG |
+| `ns003_visualizer.py` | Visualisation 2D/3D/graphml des explorations |
+| `ns004_solver_xai.py` | Colorisation XAI des nœuds du graphe EEG |
+| `ns005_eeg_real_loader.py` | Extraction et vectorisation EEG depuis HDF5 |
+| `ns006_live_solver.py` | Prototype d'exécution NP sur EEG live |
+| `ns007_logger.py` | Logging EEG + solutions + frames (GIF, JSON) |
+| `ns008_riemann.py` | Analyse EEG ↔ plan complexe (hypothèse Riemann) |
+| `ns008_riemann_explorer.py` | Mapping spectral EEG ↔ zéros ζ(s) |
+| `ns009_topo_wavelet.py` | Décomposition ondelettes + TDA EEG |
+| `ns010_topo_mapper.py` | Mapping avancé topologique des signaux EEG |
+| `ns011_benchmark.py` | Comparaison brute vs guided vs random |
+| `ns012_cycle_detector.py` | Détection de cycles cognitifs (Betti-1) |
+| `ns013_model_fusion.py` | Fusion TDA + ondelettes → Modèle ML |
+| `ns014_live_predictor.py` | Prédiction temps réel EEG + SHAP live |
+| `ns015_shap_live.py` | Explication XAI frame-by-frame (SHAP) |
 
 ---
 
@@ -46,6 +51,7 @@ python ns006_live_solver.py
 
 🧠 Objectif du dossier NP/
 
+```
 Ce sous-module vise à :
 
 Modéliser la résolution de problèmes NP via signaux EEG
@@ -57,6 +63,7 @@ Analyser topologiquement le comportement cognitif
 Fusionner données biologiques et structures NP-complexes
 
 Offrir une base de réflexion IA + cerveau sur des problèmes fondamentaux
+```
 
 📊 Fichiers générés typiques
 ```
