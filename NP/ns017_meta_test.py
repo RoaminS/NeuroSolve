@@ -3,9 +3,9 @@ Ce qu’il te faut pour le lancer :
 
 1. 📂 Place tes fichiers .h5 dans un dossier :
 
-real_eeg_data_h5/
+real_eeg_data/
 ├── patient_01.h5
-├── patient_02.h5
+├── patient_02.set
 ├── ...
 
 2. ▶️ Lance :
@@ -48,13 +48,49 @@ STRATEGIES = ["exhaustive", "guided", "random"]
 MAX_DEPTH = 5000
 TARGET_OFFSET = 10
 
-# === Chargement EEG .h5
-def load_eeg_h5(file_path, topn=5):
-    with h5py.File(file_path, 'r') as f:
-        X = f["X"][:]
-        subj = f["subj"][:]
-        y = f["y"][:] if "y" in f else np.array([-1] * len(X))
-    return X[:topn], subj[:topn], y[:topn]
+# === Chargement EEG .h5/.json/.set", ".edf", ".bdf
+def load_any_eeg_file(filepath, topn=5):
+    ext = os.path.splitext(filepath)[1].lower()
+    X, subj, y = [], [], []
+
+    if ext == ".h5":
+        import h5py
+        with h5py.File(filepath, 'r') as f:
+            X = f["X"][:topn]
+            subj = f["subj"][:topn]
+            y = f["y"][:topn] if "y" in f else [-1] * topn
+
+    elif ext == ".json":
+        with open(filepath, "r") as f:
+            data = json.load(f)
+        X = [np.array(v["vector"]) for v in data[:topn]]
+        subj = [v.get("subject", "unknown") for v in data[:topn]]
+        y = [v.get("label", -1) for v in data[:topn]]
+
+    elif ext in [".set", ".edf", ".bdf"]:
+        import mne
+        if ext == ".set":
+            raw = mne.io.read_raw_eeglab(filepath, preload=True)
+        elif ext == ".edf":
+            raw = mne.io.read_raw_edf(filepath, preload=True)
+        elif ext == ".bdf":
+            raw = mne.io.read_raw_bdf(filepath, preload=True)
+        raw.pick_types(eeg=True)
+        raw.filter(0.5, 45)
+        raw.resample(128)
+        data = raw.get_data()
+        # Segmentation en vecteurs de longueur 512
+        for i in range(0, data.shape[1] - 512, 512):
+            vec = data[:, i:i + 512].T.flatten()
+            X.append(vec)
+            subj.append(os.path.basename(filepath))
+            y.append(-1)
+            if len(X) >= topn:
+                break
+    else:
+        raise ValueError(f"Format de fichier non pris en charge : {ext}")
+
+    return np.array(X), subj, y
 
 # === Génère un ensemble d'entiers à partir du vecteur EEG
 def eeg_vector_to_problem(vec, n=19):
@@ -127,9 +163,11 @@ def main():
     all_logs = []
 
     for fname in os.listdir(DATA_DIR):
-        if fname.endswith(".h5"):
+        if fname.lower().endswith((".h5", ".json", ".set", ".edf", ".bdf")):
             print(f"📂 Traitement du fichier : {fname}")
-            X, subj, y = load_eeg_h5(os.path.join(DATA_DIR, fname))
+            X, subj, y = load_any_eeg_file(os.path.join(DATA_DIR, fname))
+
+            # 👇 Manquait cette ligne :
             logs = test_strategies_on_eeg(X, subj, y)
             all_logs.extend(logs)
 
