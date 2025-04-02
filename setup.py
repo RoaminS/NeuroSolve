@@ -1,0 +1,41 @@
+from setuptools import setup, find_packages
+
+setup(
+    name="NeuroSolve",
+    version="0.1.0",
+    author="Kocupyr Romain",
+    author_email="romainsantoli@gmail.com",
+    description="🧠 NeuroSolve — EEG, NP-complexity, Topological ML, XAI",
+    long_description=open("README.md").read(),
+    long_description_content_type="text/markdown",
+    url="https://github.com/RoaminS/NeuroSolve",
+    packages=find_packages(include=["NP", "NP.*"]),
+    include_package_data=True,
+    install_requires=[
+        "numpy",
+        "pandas",
+        "scikit-learn",
+        "matplotlib",
+        "seaborn",
+        "pywt",
+        "ripser",
+        "persim",
+        "mne",
+        "shap",
+        "xgboost",
+        "lightgbm",
+        "imageio",
+        "pylsl",
+        "streamlit"
+    ],
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: Creative Commons Attribution Non-Commercial Share Alike 4.0",
+        "Operating System :: OS Independent",
+        "Intended Audience :: Science/Research",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Scientific/Engineering :: Information Analysis",
+        "Topic :: Scientific/Engineering :: Human Machine Interfaces",
+    ],
+    python_requires='>=3.8',
+)
