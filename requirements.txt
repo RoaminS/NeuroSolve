@@ -13,3 +13,4 @@ tqdm
 kaleido
 openpyxl
 playsound
+streamlit
