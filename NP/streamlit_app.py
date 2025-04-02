@@ -1,3 +1,18 @@
+'''
+Ce fichier crée une UI web complète en local ou sur n'importe quel hébergement Streamlit :
+
+Il affiche :
+🎞️ Le GIF prediction_live.gif
+
+🔍 L’image SHAP en temps réel shap_live_frame.png
+
+📊 La table des prédictions ns020_predictions.csv
+
+⚠️ Les alertes de alerts_detected.json (si elles existent)
+pip install streamlit
+streamlit run streamlit_app.py
+'''
+
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
