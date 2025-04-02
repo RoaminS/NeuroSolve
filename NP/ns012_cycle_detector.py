@@ -18,6 +18,8 @@ import numpy as np
 import mne
 import json
 import pandas as pd
+import imageio
+from matplotlib.animation import FuncAnimation
 import matplotlib.pyplot as plt
 import seaborn as sns
 from ripser import ripser
@@ -88,6 +90,13 @@ def export_cycles(cycles, results_dir):
     print(f"💾 Export JSON : {json_path}")
     print(f"💾 Export CSV  : {csv_path}")
 
+# Fusion avec topo_wavelet → pré-version NS013
+def extract_wavelet_features(data, wavelet='db4', level=4):
+    import pywt
+    coeffs = pywt.wavedec(data, wavelet, level=level)
+    coeff_arr = pywt.coeffs_to_array(coeffs)[0]
+    return coeff_arr.flatten()
+
 # === MAIN
 def main():
     print("🧠 Détection des cycles EEG persistants (Betti-1)")
@@ -95,6 +104,47 @@ def main():
     cycles, windows = detect_cycles(data)
     export_cycles(cycles, RESULTS_DIR)
     plot_cycles(cycles, os.path.join(RESULTS_DIR, "cycles_persistence_timeline.png"))
+    generate_cycle_gif(data, FS, windows)
+    wavelet_feat = extract_wavelet_features(data)
+    # Tu peux maintenant combiner wavelet_feat + persistence pour un modèle ML ou une visualisation
+
+
+def generate_cycle_gif(data, fs, windows, out_path="ns012_results/cycle_animation.gif"):
+    fig, ax = plt.subplots(figsize=(10, 3))
+    ax.set_ylim(np.min(data), np.max(data))
+    ax.set_xlim(0, len(data) / fs)
+    ax.set_title("🎞️ Animation des cycles détectés")
+    line, = ax.plot([], [], lw=2)
+
+    def update(i):
+        start, _ = windows[i]
+        x = np.linspace(start / fs, (start + WINDOW_SIZE) / fs, WINDOW_SIZE)
+        y = data[start:start + WINDOW_SIZE]
+        line.set_data(x, y)
+        return line,
+
+    ani = FuncAnimation(fig, update, frames=len(windows), blit=True)
+    ani.save(out_path, writer='pillow', fps=2)
+    print(f"🎞️ Animation sauvegardée : {out_path}")
+
+def correlate_with_labels(cycles_csv, labels_csv):
+    cycles_df = pd.read_csv(cycles_csv)
+    labels_df = pd.read_csv(labels_csv)  # Doit contenir colonne: subject_id, mmse_score ou class
+
+    # Exemple : fusion par ID (à adapter selon format EEG/label)
+    merged = pd.merge(cycles_df, labels_df, how="left", on="subject_id")
+
+    # Corrélation simple persistance ↔ MMSE
+    if "mmse_score" in merged.columns:
+        corr = merged["persistence"].corr(merged["mmse_score"])
+        print(f"📊 Corrélation cycles / MMSE : {corr:.4f}")
+    elif "class" in merged.columns:
+        sns.boxplot(data=merged, x="class", y="persistence")
+        plt.title("Persistance topologique par classe cognitive")
+        plt.tight_layout()
+        plt.savefig("ns012_results/cycle_vs_class.png")
+        print("📈 Boxplot cycle/class : ns012_results/cycle_vs_class.png")
+
 
 if __name__ == "__main__":
     main()
