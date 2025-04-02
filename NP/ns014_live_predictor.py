@@ -34,6 +34,8 @@ WINDOW_SIZE = 512
 FS = 128
 CHANNEL = "Cz"
 PREDICTION_INTERVAL = 2  # sec
+THRESHOLD = 0.85  # Seuil d’alerte cognitive (proba classe 1)
+
 
 # === Fonctions de features (ondelettes + TDA)
 def extract_wavelet_features(data, wavelet='db4', level=4):
