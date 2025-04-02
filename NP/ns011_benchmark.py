@@ -20,6 +20,7 @@ import numpy as np
 import pandas as pd
 from math import pi
 import seaborn as sns
+import shutil, webbrowser
 import matplotlib.pyplot as plt
 from ns001_neuro_np_solver import subset_sum_solver, SolverConfig
 
@@ -149,41 +150,45 @@ def main():
     plt.savefig("benchmark_radar_plot.png")
     print("📊 Radar plot sauvegardé : benchmark_radar_plot.png")
 
-   # === HTML DASHBOARD
-html_path = os.path.join(RESULTS_DIR, "benchmark_summary.html")
-with open(html_path, "w") as f:
-    f.write(f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <title>🧠 NeuroSolv Benchmark Résumé</title>
-        <style>
-            body {{ font-family: sans-serif; padding: 20px; }}
-            h1 {{ color: #333; }}
-            img {{ max-width: 600px; display: block; margin-bottom: 30px; }}
-        </style>
-    </head>
-    <body>
-        <h1>🧠 Résultats du Benchmark NeuroSolv</h1>
-        <p><a href="benchmark_results.csv" download>📥 Télécharger les résultats (.csv)</a></p>
+    # === HTML DASHBOARD
+    html_path = os.path.join(RESULTS_DIR, "benchmark_summary.html")
+    with open(html_path, "w") as f:
+        f.write(f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>🧠 NeuroSolv Benchmark Résumé</title>
+            <style>
+                body {{ font-family: sans-serif; padding: 20px; }}
+                h1 {{ color: #333; }}
+                img {{ max-width: 600px; display: block; margin-bottom: 30px; }}
+            </style>
+        </head>
+        <body>
+            <h1>🧠 Résultats du Benchmark NeuroSolv</h1>
+            <p><a href="benchmark_results.csv" download>📥 Télécharger les résultats (.csv)</a></p>
 
-        <h2>1. Temps de résolution par stratégie (avec succès)</h2>
-        <img src="benchmark_time_vs_success.png" alt="Barplot temps vs succès">
+            <h2>1. Temps de résolution par stratégie (avec succès)</h2>
+            <img src="benchmark_time_vs_success.png" alt="Barplot temps vs succès">
 
-        <h2>2. Matrice de succès EEG × Stratégie</h2>
-        <img src="benchmark_matrix.png" alt="Matrice EEG/Strat">
+            <h2>2. Matrice de succès EEG × Stratégie</h2>
+            <img src="benchmark_matrix.png" alt="Matrice EEG/Strat">
 
-        <h2>3. Radar Plot de performance</h2>
-        <img src="benchmark_radar_plot.png" alt="Radar stratégie">
+            <h2>3. Radar Plot de performance</h2>
+            <img src="benchmark_radar_plot.png" alt="Radar stratégie">
 
-        <hr>
-        <p><em>Généré automatiquement par ns999_benchmark.py</em></p>
-    </body>
-    </html>
-    """)
+            <hr>
+            <p><em>Généré automatiquement par ns999_benchmark.py</em></p>
+        </body>
+        </html>
+        """)
 
-import shutil, webbrowser
-shutil.copy(OUTPUT_CSV, os.path.join(os.getcwd(), "benchmark_results.csv"))
-webbrowser.open(os.path.abspath(html_path))
-print(f"📄 Dashboard ouvert : {html_path}")
+    # Copier le CSV dans le dossier courant pour le HTML
+    shutil.copy(OUTPUT_CSV, os.path.join(os.getcwd(), "benchmark_results.csv"))
+    webbrowser.open(os.path.abspath(html_path))
+    print(f"📄 Dashboard ouvert : {html_path}")
+
+if __name__ == "__main__":
+    main()
+
