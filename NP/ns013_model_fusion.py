@@ -17,10 +17,14 @@ Licence : CC BY-NC-SA 4.0
 
 import os
 import json
+import shap
+import webbrowser
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+from xgboost import XGBClassifier
+from lightgbm import LGBMClassifier
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
@@ -79,6 +83,33 @@ def run_model(df, wavelets=None):
     y_pred = clf.predict(X_test)
     y_prob = clf.predict_proba(X_test)[:, 1] if len(np.unique(y)) == 2 else None
 
+ 
+    models = {
+        "RandomForest": RandomForestClassifier(n_estimators=150, random_state=0),
+        "XGBoost": XGBClassifier(use_label_encoder=False, eval_metric='logloss'),
+        "LightGBM": LGBMClassifier()
+    }
+
+    scores = []
+
+    for name, model in models.items():
+        model.fit(X_train, y_train)
+        score = model.score(X_test, y_test)
+        scores.append((name, score))
+        print(f"✅ {name} Accuracy: {score:.3f}")
+
+    # Plot benchmark
+    model_names, accs = zip(*scores)
+    plt.figure(figsize=(6, 4))
+    sns.barplot(x=list(model_names), y=list(accs), palette="Set2")
+    plt.ylim(0, 1)
+    plt.ylabel("Accuracy")
+    plt.title("Benchmark modèles ML (fusion EEG)")
+    plt.tight_layout()
+    plt.savefig(os.path.join(OUTPUT_DIR, "model_benchmark.png"))
+    print("📊 Benchmark modèles ML sauvegardé")
+
+
     print("\n🧠 Résultats du modèle :")
     print(classification_report(y_test, y_pred))
 
@@ -108,11 +139,61 @@ def run_model(df, wavelets=None):
         plt.savefig(os.path.join(OUTPUT_DIR, "roc_curve.png"))
         print("📈 ROC Curve sauvegardée")
 
+    # === XAI avec SHAP
+    try:
+        explainer = shap.Explainer(clf, X_train)
+        shap_values = explainer(X_test)
+        plt.figure()
+        shap.plots.beeswarm(shap_values, show=False)
+        plt.title("SHAP Feature Importance")
+        plt.tight_layout()
+        plt.savefig(os.path.join(OUTPUT_DIR, "shap_beeswarm.png"))
+        print("🔍 SHAP beeswarm plot sauvegardé")
+    except Exception as e:
+        print(f"⚠️ SHAP non exécuté : {e}")
+
+
 # === MAIN
 def main():
     print("🧬 NS013 — Fusion TDA + ondelettes pour classification EEG")
     df, wavelets = load_and_merge()
     run_model(df, wavelets)
+
+    # === HTML DASHBOARD
+    html_path = os.path.join(OUTPUT_DIR, "ns013_dashboard.html")
+    with open(html_path, "w") as f:
+        f.write(f"""
+        <!DOCTYPE html>
+        <html><head>
+        <meta charset="UTF-8">
+        <title>NS013 - EEG Model Fusion</title>
+        <style>
+            body {{ font-family: Arial; padding: 30px; background: #fafafa; }}
+            img {{ max-width: 600px; margin: 20px 0; }}
+        </style>
+        </head><body>
+        <h1>🧠 NS013 - Modèle EEG Fusion (TDA + Ondelette)</h1>
+        <p>Comparaison de modèles + interprétabilité XAI + visualisation</p>
+
+        <h2>📊 Matrice de confusion</h2>
+        <img src="confusion_matrix.png" alt="Confusion Matrix">
+
+        <h2>📈 Courbe ROC</h2>
+        <img src="roc_curve.png" alt="ROC">
+
+        <h2>🤖 Benchmark modèles ML</h2>
+        <img src="model_benchmark.png" alt="Benchmark">
+
+        <h2>🔍 SHAP (Interprétabilité)</h2>
+        <img src="shap_beeswarm.png" alt="SHAP">
+
+        <p style="margin-top:40px;">Fichier généré automatiquement par <strong>ns013_model_fusion.py</strong></p>
+        </body></html>
+        """)
+    
+    webbrowser.open(os.path.abspath(html_path))
+    print(f"🌐 Dashboard ouvert automatiquement : {html_path}")
+
 
 if __name__ == "__main__":
     main()
