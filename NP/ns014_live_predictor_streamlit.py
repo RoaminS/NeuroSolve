@@ -141,6 +141,21 @@ def predict_segment(model, scaler, segment, use_adformer=False):
     return pred, proba
 
 
+# === Envoi automatique du ZIP à une API Flask
+def push_zip_to_api(zip_path, endpoint="http://localhost:6000/upload_session"):
+    try:
+        with open(zip_path, 'rb') as f:
+            files = {'file': (os.path.basename(zip_path), f)}
+            r = requests.post(endpoint, files=files)
+        if r.status_code == 200:
+            st.success("📡 Session envoyée à l’API Flask !")
+            st.json(r.json())
+        else:
+            st.error(f"❌ Échec de l’envoi ({r.status_code})")
+    except Exception as e:
+        st.error(f"⚠️ Erreur API : {e}")
+
+
 # === LIVE LOOP
 def live_loop(config=None):
 
@@ -221,9 +236,13 @@ def live_loop(config=None):
     # Email
     if summary["nb_alerts"] > 0 and config:
         send_email_alert(summary, config, zip_path)
+        
+    # API
+    if config.get("push_to_api", False):
+        push_zip_to_api(zip_path)
 
     return zip_path
-
+    
 # === UI STREAMLIT
 st.set_page_config(page_title="EEG Live Predictor")
 st.title("🧠 NeuroSolve – Prédiction EEG Temps Réel")
@@ -237,4 +256,13 @@ if st.button("🧠 Lancer la prédiction EEG (LSL)"):
     st.image(generate_qr_for_zip(zip_path), width=220)
     st.markdown("### 🔗 QR Code session")
     st.image(generate_qr_for_zip(zip_path), width=220, caption="Scanne pour voir la session EEG 🧠")
+
+    with open(zip_path, "rb") as f:
+    st.download_button(
+        label="⬇️ Télécharger le ZIP de la session",
+        data=f,
+        file_name=os.path.basename(zip_path),
+        mime="application/zip"
+    )
+
 
