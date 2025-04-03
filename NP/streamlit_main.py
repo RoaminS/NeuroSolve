@@ -1,35 +1,39 @@
 """
 streamlit_main.py
 
+🧠 Lancement unifié de la suite NeuroSolve (Streamlit)
 Licence : Creative Commons BY-NC-SA 4.0
-Auteurs : 
-    - Kocupyr Romain (chef de projet) : rkocupyr@gmail.com
-    - GPT multi_gpt_api (OpenAI)
 """
 
 import streamlit as st
+import runpy
+import os
 
 st.set_page_config(page_title="🧠 NeuroSolve Suite", layout="wide")
-st.sidebar.title("🧠 NeuroSolve UI")
-section = st.sidebar.radio("Choisir une vue :", [
+st.sidebar.title("🧠 Menu Principal NeuroSolve")
+
+# Choix utilisateur
+section = st.sidebar.radio("📂 Choisir un module :", [
     "🎯 Live Prédiction EEG",
     "📁 Visualiseur de sessions",
     "🌍 Dashboard global",
     "📤 Config Email / Notif",
-    "🧱 Générer Résumé Cross-Session"
+    "🧱 Résumé Cross-Session"
 ])
 
-if section == "🎯 Live Prédiction EEG":
-    exec(open("ns014_live_predictor_streamlit.py").read())
+# Mapping clean
+module_mapping = {
+    "🎯 Live Prédiction EEG": "ns014_live_predictor_streamlit.py",
+    "📁 Visualiseur de sessions": "logs_viewer.py",
+    "🌍 Dashboard global": "global_dashboard.py",
+    "📤 Config Email / Notif": "streamlit_email_config.py",
+    "🧱 Résumé Cross-Session": "generate_sessions_summary.py"
+}
 
-elif section == "📁 Visualiseur de sessions":
-    exec(open("logs_viewer.py").read())
+selected_file = module_mapping.get(section)
 
-elif section == "🌍 Dashboard global":
-    exec(open("global_dashboard.py").read())
-
-elif section == "📤 Config Email / Notif":
-    exec(open("streamlit_email_config.py").read())
-
-elif section == "🧱 Générer Résumé Cross-Session":
-    exec(open("generate_sessions_summary.py").read())
+if selected_file and os.path.exists(selected_file):
+    st.markdown(f"### 🚀 Module sélectionné : `{selected_file}`")
+    runpy.run_path(selected_file, run_name="__main__")
+else:
+    st.error("❌ Fichier introuvable ou erreur de sélection.")
