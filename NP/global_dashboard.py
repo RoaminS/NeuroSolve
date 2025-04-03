@@ -1,3 +1,12 @@
+"""
+global_dashboard.py
+
+Licence : Creative Commons BY-NC-SA 4.0
+Auteurs : 
+    - Kocupyr Romain (chef de projet) : rkocupyr@gmail.com
+    - GPT multi_gpt_api (OpenAI)
+"""
+
 import plotly.express as px
 import plotly.graph_objects as go
 
