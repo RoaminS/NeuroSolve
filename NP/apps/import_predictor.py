@@ -16,6 +16,7 @@ Dev    : multi_gpt_api
 
 import os
 import json
+import torch
 import pickle
 import shutil
 import numpy as np
@@ -99,7 +100,8 @@ def extract_features(x):
 # === Modèle
 def load_model(use_adformer=False):
     if use_adformer:
-        model = tf.keras.models.load_model(os.path.join(MODEL_DIR, "model_adformer.h5"))
+        model = torch.load(os.path.join(MODEL_DIR, "model_adformer.pth"), map_location=torch.device('cpu'))
+        model.eval()
         scaler = np.load(os.path.join(MODEL_DIR, "model_scaler_adformer.npz"), allow_pickle=True)["scaler"][()]
     else:
         model = pickle.load(open(os.path.join(MODEL_DIR, "model.pkl"), "rb"))
@@ -111,8 +113,8 @@ st.set_page_config(page_title="🧠 Importateur EEG & Prédicteur")
 st.title("🧠 NeuroSolve – Prédictions depuis EEG importé")
 
 uploaded = st.file_uploader("📂 Importer un fichier EEG (.set, .edf, .bdf, .h5, .json)", type=["set", "edf", "bdf", "h5", "json"])
-model_type = st.selectbox("🧠 Choix du modèle :", ["RandomForest (.pkl)", "AdFormer (.h5)"])
-use_adformer = model_type == "AdFormer (.h5)"
+model_type = st.selectbox("🧠 Choix du modèle :", ["RandomForest (.pkl)", "AdFormer (.pth)"])
+use_adformer = model_type == "AdFormer (.pth)"
 
 if uploaded and st.button("🚀 Lancer les prédictions"):
     X, subjects = load_eeg_any(uploaded)
