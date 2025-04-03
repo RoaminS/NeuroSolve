@@ -199,7 +199,7 @@ if zip_path and os.path.exists(zip_path):
 else:
     st.warning("💡 Clique sur 'Créer une archive ZIP' avant de télécharger ou d'envoyer.")
 
-# == dashboard global de toutes les sessions EEG
+# === dashboard global de toutes les sessions EEG
 st.markdown("---")
 st.markdown("### 🌍 Résumé Global de toutes les sessions EEG")
 
@@ -217,6 +217,30 @@ if os.path.exists(GLOBAL_SUMMARY):
     st.plotly_chart(fig_global, use_container_width=True)
 else:
     st.warning("Le fichier `sessions_summary.csv` est introuvable. Lance `generate_sessions_summary.py` d’abord.")
+
+# === Affichage de sessions_summary.csv
+st.markdown("---")
+st.markdown("## 🌍 Résumé global de toutes les sessions")
+
+GLOBAL_SUMMARY = "sessions_summary.csv"
+if os.path.exists(GLOBAL_SUMMARY):
+    df_global = pd.read_csv(GLOBAL_SUMMARY)
+    st.dataframe(df_global, use_container_width=True)
+
+    # Moyennes
+    avg_alert_rate = df_global["alert_rate"].mean()
+    avg_duration = df_global["duration_sec"].mean()
+    total_sessions = len(df_global)
+
+    st.markdown(f"**🧠 Moyenne du taux d’alerte :** `{avg_alert_rate:.2%}`")
+    st.markdown(f"**⏱️ Durée moyenne :** `{avg_duration:.1f}s`")
+    st.markdown(f"**📁 Total de sessions analysées :** `{total_sessions}`")
+
+    # Plotly : Histogramme sessions par taux d’alerte
+    fig = px.histogram(df_global, x="alert_rate", nbins=10, title="📊 Distribution des taux d’alerte EEG")
+    st.plotly_chart(fig, use_container_width=True)
+else:
+    st.info("Le fichier `sessions_summary.csv` n'existe pas encore.")
 
 
 
