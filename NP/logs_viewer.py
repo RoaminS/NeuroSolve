@@ -9,16 +9,21 @@ Auteurs :
 
 streamlit run logs_viewer.py
 """
+
 import streamlit as st
 import os
 import pandas as pd
 import json
 from PIL import Image
+import shutil
+import zipfile
+
 
 st.set_page_config(layout="wide", page_title="🧠 NeuroSolve Logs Viewer")
 
 st.title("🧠 NeuroSolve — Session Explorer")
 st.markdown("📁 Navigation dans les sessions EEG sauvegardées par `ns014_live_predictor.py`")
+
 
 # === Sélection de la session
 LOGS_DIR = "logs"
@@ -30,6 +35,19 @@ if not sessions:
 
 selected_session = st.selectbox("🧠 Sélectionne une session :", sessions)
 session_path = os.path.join(LOGS_DIR, selected_session)
+
+def push_session_to_api(zip_path, api_url="http://localhost:5000/upload_session"):
+    try:
+        with open(zip_path, 'rb') as f:
+            files = {'file': (os.path.basename(zip_path), f)}
+            r = requests.post(api_url, files=files)
+        if r.status_code == 200:
+            st.success("📡 Session envoyée à l’API !")
+            st.json(r.json())
+        else:
+            st.error(f"❌ Échec de l’envoi : {r.status_code}")
+    except Exception as e:
+        st.error(f"⚠️ Erreur d’envoi : {e}")
 
 # === Chargement des fichiers
 csv_file = [f for f in os.listdir(session_path) if f.endswith(".csv")]
@@ -76,7 +94,28 @@ if os.path.exists(shap_img):
 else:
     st.info("Image SHAP non disponible.")
 
+# == Zip Session
+def zip_session(session_path):
+    zip_name = session_path + ".zip"
+    shutil.make_archive(session_path, 'zip', session_path)
+    st.success(f"📦 Session compressée : {zip_name}")
+    return zip_name
+
 # === FOOTER
 st.markdown("---")
 st.markdown(f"📂 Session : `{selected_session}`")
+st.markdown("## 📦 Export & API")
+
+# Bouton ZIP
+if st.button("📁 Créer une archive ZIP de cette session"):
+    zip_path = zip_session(session_path)
+
+# Bouton PUSH
+if st.button("📤 Envoyer la session à l’API Flask"):
+    zip_path = session_path + ".zip"
+    if os.path.exists(zip_path):
+        push_session_to_api(zip_path)
+    else:
+        st.warning("💡 Zipper la session avant de l’envoyer.")
+
 st.markdown("Made with ❤️ by **Kocupyr Romain** & `multi_gpt_api`")
