@@ -72,10 +72,6 @@ else:
     st.warning("Le fichier `sessions_summary.csv` n’existe pas encore.")
 
 
-pdfkit.from_file("sessions_summary_plot.html", "summary_report.pdf")
-print("📥 Rapport PDF généré : summary_report.pdf")
-
-
 # === Génération PDF (optionnel)
 html_report = "sessions_summary_plot.html"
 pdf_report = "summary_report.pdf"
