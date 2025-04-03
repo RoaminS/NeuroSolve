@@ -174,6 +174,7 @@ st.markdown(f"📂 Session : `{selected_session}`")
 st.markdown("## 📦 Export & API")
 
 # === Bouton ZIP
+zip_path = None
 if st.button("📁 Créer une archive ZIP de cette session"):
     zip_path = zip_session(session_path)
 
@@ -199,28 +200,9 @@ if zip_path and os.path.exists(zip_path):
 else:
     st.warning("💡 Clique sur 'Créer une archive ZIP' avant de télécharger ou d'envoyer.")
 
-# === dashboard global de toutes les sessions EEG
+# === Résumé global des sessions EEG
 st.markdown("---")
-st.markdown("### 🌍 Résumé Global de toutes les sessions EEG")
-
-if os.path.exists(GLOBAL_SUMMARY):
-    df_global = pd.read_csv(GLOBAL_SUMMARY)
-    st.dataframe(df_global, use_container_width=True)
-
-    fig_global = px.bar(
-        df_global,
-        x="session",
-        y="alert_rate",
-        title="🧠 Alert Rate Global par Session",
-        hover_data=["nb_frames", "nb_alerts", "duration_sec"]
-    )
-    st.plotly_chart(fig_global, use_container_width=True)
-else:
-    st.warning("Le fichier `sessions_summary.csv` est introuvable. Lance `generate_sessions_summary.py` d’abord.")
-
-# === Affichage de sessions_summary.csv
-st.markdown("---")
-st.markdown("## 🌍 Résumé global de toutes les sessions")
+st.markdown("### 🌍 Résumé global de toutes les sessions EEG")
 
 GLOBAL_SUMMARY = "sessions_summary.csv"
 if os.path.exists(GLOBAL_SUMMARY):
@@ -236,12 +218,23 @@ if os.path.exists(GLOBAL_SUMMARY):
     st.markdown(f"**⏱️ Durée moyenne :** `{avg_duration:.1f}s`")
     st.markdown(f"**📁 Total de sessions analysées :** `{total_sessions}`")
 
-    # Plotly : Histogramme sessions par taux d’alerte
-    fig = px.histogram(df_global, x="alert_rate", nbins=10, title="📊 Distribution des taux d’alerte EEG")
-    st.plotly_chart(fig, use_container_width=True)
+    # Barplot global
+    fig_global = px.bar(
+        df_global,
+        x="session",
+        y="alert_rate",
+        title="📊 Taux d’alerte par session",
+        hover_data=["nb_frames", "nb_alerts", "duration_sec"]
+    )
+    st.plotly_chart(fig_global, use_container_width=True)
+
+    # Histogramme distribution
+    fig_hist = px.histogram(df_global, x="alert_rate", nbins=10, title="📈 Distribution du taux d’alerte EEG")
+    st.plotly_chart(fig_hist, use_container_width=True)
+
 else:
-    st.info("Le fichier `sessions_summary.csv` n'existe pas encore.")
+    st.warning("Le fichier `sessions_summary.csv` n'existe pas encore. Lance `generate_sessions_summary.py` d’abord.")
 
-
-
+# === Signature
+st.markdown("---")
 st.markdown("Made with ❤️ by **Kocupyr Romain** & `multi_gpt_api`")
