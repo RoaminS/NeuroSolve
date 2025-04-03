@@ -11,6 +11,10 @@ Il affiche :
 ⚠️ Les alertes de alerts_detected.json (si elles existent)
 pip install streamlit
 streamlit run streamlit_app.py
+
+Auteur : Kocupyr Romain
+Dev    : multi_gpt_api
+Licence : CC BY-NC-SA 4.0
 '''
 
 import streamlit as st
