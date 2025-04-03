@@ -4,6 +4,10 @@ Licence : Creative Commons BY-NC-SA 4.0
 Auteurs : 
     - Kocupyr Romain (chef de projet) : rkocupyr@gmail.com
     - GPT multi_gpt_api 
+
+💡 Commande pour le lancer :
+
+streamlit run logs_viewer.py
 """
 import streamlit as st
 import os
