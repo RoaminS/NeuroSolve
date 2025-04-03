@@ -18,6 +18,7 @@ import os
 import pickle
 import numpy as np
 import pandas as pd
+import datetime
 import mne
 import time
 from playsound import playsound
@@ -195,4 +196,25 @@ def live_loop(mode="lsl", gui=False, save_gif=False):
 if __name__ == "__main__":
     live_loop(mode="lsl", gui=False, save_gif=True)  # ← ou Streamlit avec gui=True
     print(f"\n📁 Session complète sauvegardée dans : {LOG_DIR}")
+
+
+# === ARCHIVAGE SUMMARY GLOBAL
+summary_data = {
+    "session_folder": os.path.basename(LOG_DIR),
+    "nb_frames": len(predictions),
+    "nb_alerts": sum(1 for p in predictions if p.get("alert")),
+    "alert_rate": round(sum(1 for p in predictions if p.get("alert")) / len(predictions), 3),
+    "duration_sec": round(predictions[-1]["time_sec"] - predictions[0]["time_sec"], 2) if len(predictions) > 1 else 0,
+    "avg_prob_class_1": round(np.mean([p["prob_class_1"] for p in predictions]), 3),
+    "timestamp_generated": datetime.datetime.now().isoformat()
+}
+
+summary_df = pd.DataFrame([summary_data])
+summary_csv_path = "sessions_summary.csv"
+if os.path.exists(summary_csv_path):
+    prev = pd.read_csv(summary_csv_path)
+    summary_df = pd.concat([prev, summary_df], ignore_index=True)
+summary_df.to_csv(summary_csv_path, index=False)
+print("📦 Résumé global mis à jour automatiquement : sessions_summary.csv")
+
 
