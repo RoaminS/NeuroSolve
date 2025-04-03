@@ -180,31 +180,70 @@ if uploaded and st.button("🚀 Lancer les prédictions"):
             st.success("📧 Email envoyé (alerte détectée)")
 
 
-    # === Streamlit: réexécution possible ===
+    # === REEXECUTION PRÉDICTION SUR FICHIER
     if "last_uploaded_file" not in st.session_state:
         st.session_state["last_uploaded_file"] = uploaded
     
     if uploaded:
-        st.session_state["last_uploaded_file"] = uploaded    
-
+        st.session_state["last_uploaded_file"] = uploaded
+    
     if st.session_state["last_uploaded_file"]:
         if st.button("🔁 Réexécuter la prédiction sur ce fichier"):
             file = st.session_state["last_uploaded_file"]
             st.info(f"Réexécution sur : {file.name}")
-            # Recharge les données et relance la prédiction
-            data = load_eeg_file(file)
-            zip_path = run_prediction_pipeline(data, file.name)
-            st.success("✅ Analyse relancée avec succès.")
-            st.image(generate_qr_for_zip(zip_path), width=220)
-
     
-    df.to_csv(os.path.join(LOG_DIR, "import_predictions.csv"), index=False)
-    json.dump(predictions, open(os.path.join(LOG_DIR, "import_predictions.json"), "w"), indent=2)
-
-    st.success("✅ Prédictions terminées.")
-    st.metric("Total vecteurs", len(predictions))
-    st.metric("Nb alertes", df["alert"].sum())
-
-    zip_path = shutil.make_archive(LOG_DIR, "zip", LOG_DIR)
-    st.download_button("⬇️ Télécharger session ZIP", open(zip_path, "rb"), file_name=os.path.basename(zip_path), mime="application/zip")
-    st.image(generate_qr_for_zip(zip_path), width=200, caption="🔗 QR session EEG importée")
+            X, subjects = load_eeg_any(file)
+            model, scaler = load_model(use_adformer)
+            predictions = []
+    
+            for i, x in enumerate(X):
+                features = extract_features(x)
+                features_scaled = scaler.transform([features])
+                if use_adformer:
+                    proba = model.predict(features_scaled)[0]
+                    pred = int(np.argmax(proba))
+                else:
+                    pred = model.predict(features_scaled)[0]
+                    proba = model.predict_proba(features_scaled)[0]
+    
+                alert = proba[1] > THRESHOLD
+                predictions.append({
+                    "i": i,
+                    "subject": subjects[i],
+                    "prediction": int(pred),
+                    "prob_class_0": float(proba[0]),
+                    "prob_class_1": float(proba[1]),
+                    "alert": alert
+                })
+    
+                if i % 5 == 0:
+                    shap_explain_live(x, model, scaler)
+                    plt.savefig(os.path.join(LOG_DIR, "shap_live_frame.png"))
+    
+            df = pd.DataFrame(predictions)
+            df.to_csv(os.path.join(LOG_DIR, "import_predictions.csv"), index=False)
+            json.dump(predictions, open(os.path.join(LOG_DIR, "import_predictions.json"), "w"), indent=2)
+    
+            summary = {
+                "session_folder": os.path.basename(LOG_DIR),
+                "nb_vectors": len(predictions),
+                "nb_alerts": int(df["alert"].sum()),
+                "alert_rate": round(df["alert"].mean(), 3),
+                "timestamp_generated": datetime.now().isoformat()
+            }
+            json.dump(summary, open(os.path.join(LOG_DIR, "summary.json"), "w"), indent=2)
+    
+            csv_summary = "sessions_summary.csv"
+            if os.path.exists(csv_summary):
+                df_sum = pd.read_csv(csv_summary)
+            else:
+                df_sum = pd.DataFrame()
+            df_sum = pd.concat([df_sum, pd.DataFrame([summary])], ignore_index=True)
+            df_sum.to_csv(csv_summary, index=False)
+    
+            zip_path = shutil.make_archive(LOG_DIR, "zip", LOG_DIR)
+    
+            st.success("✅ Réexécution terminée")
+            st.image(generate_qr_for_zip(zip_path), width=220, caption="QR Session EEG Importée 🔁")
+            st.download_button("⬇️ Télécharger ZIP de session", open(zip_path, "rb"),
+                               file_name=os.path.basename(zip_path), mime="application/zip")
