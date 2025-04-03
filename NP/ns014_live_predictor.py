@@ -30,7 +30,7 @@ from ripser import ripser
 # === CONFIGURATION
 MODEL_PATH = "ns013_results/model.pkl"
 EEG_PATH = "eeg_samples/subject_01.set"
-RESULTS_CSV = "ns020_predictions.csv"
+RESULTS_CSV = "ns014_predictions.csv"
 WINDOW_SIZE = 512
 FS = 128
 CHANNEL = "Cz"
