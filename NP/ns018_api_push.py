@@ -19,8 +19,8 @@ import requests
 PREDICTIONS_FILE = "predictions_log.json"
 ALERTS_FILE = "alerts_detected.json"
 
-API_ENDPOINT_PRED = "http://localhost:5000/receive_prediction"
-API_ENDPOINT_ALERT = "http://localhost:5000/receive_alert"
+API_ENDPOINT_PRED = "http://localhost:6000/receive_prediction"
+API_ENDPOINT_ALERT = "http://localhost:6000/receive_alert"
 
 def push_data():
     print("📡 NS050 — Push vers API Flask en cours...")
