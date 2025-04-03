@@ -25,3 +25,4 @@ xgboost>=2.0.0
 lightgbm>=4.2.0
 pydub>=0.25.1
 playsound==1.2.2            # 🎧 Compatible et simple
+requests
