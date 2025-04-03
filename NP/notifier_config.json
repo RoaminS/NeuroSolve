@@ -1,0 +1,10 @@
+{
+  "sender_email": "neurosolve@yourdomain.com", # à modifier
+  "password": "tonmotdepasseapp", # à modifier
+  "recipients": [
+    "ton@email.com", # à modifier
+    "contact@centre-cognitif.fr" # à modifier
+  ],
+  "smtp_server": "smtp.yourdomain.com", # à modifier
+  "smtp_port": 587 # à modifier
+}
