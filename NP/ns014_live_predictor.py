@@ -26,6 +26,18 @@ from ns015_shap_live import shap_explain_live
 import matplotlib.pyplot as plt
 from scipy.signal import welch
 from ripser import ripser
+from datetime import datetime
+
+# === TIME-BASED SESSION DIRECTORY
+timestamp_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+LOG_DIR = os.path.join("logs", f"session_{timestamp_str}")
+os.makedirs(LOG_DIR, exist_ok=True)
+
+RESULTS_CSV = os.path.join(LOG_DIR, f"ns014_predictions_{timestamp_str}.csv")
+JSON_LOG = os.path.join(LOG_DIR, "predictions_log.json")
+GIF_FILE = os.path.join(LOG_DIR, "prediction_live.gif")
+SHAP_IMG = os.path.join(LOG_DIR, "shap_live_frame.png")  # si utilisé
+ALERT_SOUND = "assets/alert_sound.mp3"  # reste en dur pour le moment
 
 # === CONFIGURATION
 MODEL_PATH = "ns013_results/model.pkl"
@@ -162,24 +174,25 @@ def live_loop(mode="lsl", gui=False, save_gif=False):
     df = pd.DataFrame(predictions)
     df.to_csv(RESULTS_CSV, index=False)
     print(f"📁 Prédictions sauvegardées : {RESULTS_CSV}")
-    
-    # === JSON LOG
+
+    # Export JSON LOG
     import json
-    with open("predictions_log.json", "w") as f:
+    with open(JSON_LOG, "w") as f:
         json.dump(predictions, f, indent=2)
-    print("🧾 Log JSON sauvegardé : predictions_log.json")
+    print(f"🧾 Log JSON sauvegardé : {JSON_LOG}")
 
-
-    # GIF output
+    # Export GIF output
     if save_gif:
         import imageio
         images = [imageio.imread(f) for f in gif_frames]
-        imageio.mimsave("prediction_live.gif", images, duration=0.6)
-        print("🎞️ GIF prédictif généré : prediction_live.gif")
+        imageio.mimsave(GIF_FILE, images, duration=0.6)
+        print(f"🎞️ GIF prédictif généré : {GIF_FILE}")
         for f in gif_frames: os.remove(f)
+
 
 # === MAIN
 
 if __name__ == "__main__":
     live_loop(mode="lsl", gui=False, save_gif=True)  # ← ou Streamlit avec gui=True
+    print(f"\n📁 Session complète sauvegardée dans : {LOG_DIR}")
 
