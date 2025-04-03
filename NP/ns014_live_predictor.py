@@ -22,7 +22,7 @@ import mne
 import time
 from playsound import playsound
 from pylsl import StreamInlet, resolve_stream
-from ns032_shap_live import shap_explain_live
+from ns015_shap_live import shap_explain_live
 import matplotlib.pyplot as plt
 from scipy.signal import welch
 from ripser import ripser
