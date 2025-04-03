@@ -18,6 +18,8 @@ from PIL import Image
 import shutil
 import zipfile
 import requests
+import qrcode
+from io import BytesIO
 
 
 st.set_page_config(layout="wide", page_title="🧠 NeuroSolve Logs Viewer")
@@ -49,6 +51,15 @@ def push_session_to_api(zip_path, api_url="http://localhost:5000/upload_session"
             st.error(f"❌ Échec de l’envoi : {r.status_code}")
     except Exception as e:
         st.error(f"⚠️ Erreur d’envoi : {e}")
+
+
+# === Fonction QR
+def generate_qr_for_session(session_zip_path):
+    url_placeholder = f"https://neurosolve.local/sessions/{os.path.basename(session_zip_path)}"
+    qr = qrcode.make(url_placeholder)
+    buffer = BytesIO()
+    qr.save(buffer, format="PNG")
+    return buffer.getvalue()
 
 # === Chargement des fichiers
 csv_file = [f for f in os.listdir(session_path) if f.endswith(".csv")]
@@ -95,6 +106,55 @@ if os.path.exists(shap_img):
 else:
     st.info("Image SHAP non disponible.")
 
+# === Générer automatiquement un fichier summary.json
+def generate_session_summary(predictions, output_path):
+    df = pd.DataFrame(predictions)
+    total = len(df)
+    alerts = df["alert"].sum() if "alert" in df else 0
+    duration = round(df["time_sec"].max() - df["time_sec"].min(), 2)
+    avg_prob = round(df["prob_class_1"].mean(), 3)
+
+    summary = {
+        "session": os.path.basename(output_path).replace("summary.json", ""),
+        "nb_frames": total,
+        "nb_alerts": int(alerts),
+        "alert_rate": round(alerts / total, 3) if total else 0,
+        "duration_sec": duration,
+        "avg_prob_class_1": avg_prob,
+        "timestamp_generated": datetime.now().isoformat()
+    }
+
+    with open(output_path, "w") as f:
+        json.dump(summary, f, indent=2)
+
+    return summary
+
+# === SUMMARY JSON
+summary_path = os.path.join(session_path, "summary.json")
+
+if os.path.exists(json_file):
+    with open(json_file) as f:
+        predictions = json.load(f)
+    summary = generate_session_summary(predictions, summary_path)
+    st.markdown("### 🧠 Synthèse de la session")
+    st.json(summary)
+
+# === Graphe résumé: Synthèse de la session
+import plotly.express as px
+if summary:
+    st.markdown("### 📈 Graphique de synthèse")
+
+    fig = px.bar(
+        x=["Alert Rate (%)", "Durée (s)", "Frames"],
+        y=[summary["alert_rate"] * 100, summary["duration_sec"], summary["nb_frames"]],
+        text=[f"{summary['alert_rate']*100:.1f}%", f"{summary['duration_sec']}s", f"{summary['nb_frames']}"],
+        labels={"x": "Indicateur", "y": "Valeur"},
+        title="📊 Indicateurs clés de la session EEG"
+    )
+    fig.update_traces(textposition='outside')
+    st.plotly_chart(fig, use_container_width=True)
+
+
 # == Zip Session
 def zip_session(session_path):
     zip_name = session_path + ".zip"
@@ -106,12 +166,28 @@ def zip_session(session_path):
 st.markdown("---")
 st.markdown(f"📂 Session : `{selected_session}`")
 st.markdown("## 📦 Export & API")
+st.markdown("### 🔗 QR Code de partage (placeholder URL)")
+if os.path.exists(zip_path):
+    qr_img = generate_qr_for_session(zip_path)
+    st.image(qr_img, width=200, caption="Scanne pour accéder à la session")
 
-# Bouton ZIP
+
+# === Bouton ZIP
 if st.button("📁 Créer une archive ZIP de cette session"):
     zip_path = zip_session(session_path)
 
-# Bouton PUSH
+# === Bouton DOWNLOAD ZIP
+if os.path.exists(zip_path):
+    with open(zip_path, "rb") as f:
+        st.download_button(
+            label="⬇️ Télécharger la session zippée",
+            data=f,
+            file_name=os.path.basename(zip_path),
+            mime="application/zip"
+        )
+
+
+# === Bouton PUSH
 if st.button("📤 Envoyer la session à l’API Flask"):
     zip_path = session_path + ".zip"
     if os.path.exists(zip_path):
