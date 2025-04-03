@@ -4,13 +4,16 @@
 """
 ns014_live_predictor_streamlit.py
 
+Licence : CC BY-NC-SA 4.0
+
 ✅ EEG prédiction live (LSL) avec XAI (SHAP)
 ✅ Export .csv / .json / .gif / résumé + QR
 ✅ Envoi email si alerte détectée
 
 Auteur : Kocupyr Romain  
 Dev    : multi_gpt_api
-Licence : CC BY-NC-SA 4.0
+
+le lancer: run streamlite ns014_live_predictor_streamlit.py
 """
 
 import os, json, pickle, smtplib, shutil, time
