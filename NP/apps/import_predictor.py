@@ -1,169 +1,161 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+import_predictor.py
+
+✅ Import EEG (.set, .edf, .bdf, .h5, .json)
+✅ Extraction TDA + ondelettes
+✅ Prédiction avec modèle NS013 (pkl ou AdFormer .h5)
+✅ Export CSV / Résumé / Alertes
+✅ QR code + SHAP
+
+Auteur : Kocupyr Romain
+Dev    : multi_gpt_api
+"""
+
 import os
 import json
 import pickle
-import tempfile
+import shutil
 import numpy as np
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
-import mne
 import tensorflow as tf
 from datetime import datetime
 from io import BytesIO
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.mime.image import MIMEImage
 import qrcode
-from playsound import playsound
+import mne
+import pywt
 from ripser import ripser
 from ns015_shap_live import shap_explain_live
+from sklearn.preprocessing import StandardScaler
 
-# === CONFIGURATION
-MODEL_PATH = "ns013_results/model.pkl"
-USE_ADFORMER = os.path.exists("ns013_results/model_adformer.h5")
-ALERT_SOUND = "assets/alert_sound.mp3"
+# === CONFIG
 THRESHOLD = 0.85
-
-# === Dossier logs auto
-timestamp_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-LOG_DIR = os.path.join("logs", f"session_{timestamp_str}")
+LOG_DIR = os.path.join("logs", f"import_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
 os.makedirs(LOG_DIR, exist_ok=True)
-RESULTS_CSV = os.path.join(LOG_DIR, f"ns014_predictions_{timestamp_str}.csv")
-JSON_LOG = os.path.join(LOG_DIR, "predictions_log.json")
-GIF_FILE = os.path.join(LOG_DIR, "prediction_live.gif")
+MODEL_DIR = "ns013_results"
 
 # === QR Code
-def generate_qr_for_zip(zip_path):
-    placeholder_url = f"https://neurosolve.local/sessions/{os.path.basename(zip_path)}"
-    qr = qrcode.make(placeholder_url)
+def generate_qr_for_zip(path):
+    url = f"https://neurosolve.local/sessions/{os.path.basename(path)}"
+    qr = qrcode.make(url)
     buf = BytesIO()
     qr.save(buf, format="PNG")
     buf.seek(0)
     return buf.getvalue()
 
-# === Email config
-def load_notifier_config(path="notifier_config.json"):
-    if not os.path.exists(path):
-        st.warning("⚠️ Fichier notifier_config.json manquant.")
-        return None
-    with open(path) as f:
-        return json.load(f)
+# === Charge EEG depuis tous les formats
+def load_eeg_any(file, topn=20):
+    ext = os.path.splitext(file.name)[1].lower()
+    X, subj = [], []
+    if ext == ".h5":
+        import h5py
+        with h5py.File(file, 'r') as f:
+            X = f["X"][:topn]
+            subj = [str(s) for s in f["subj"][:topn]]
+    elif ext == ".json":
+        content = json.load(file)
+        for entry in content[:topn]:
+            X.append(np.array(entry["vector"]))
+            subj.append(entry.get("subject", "unknown"))
+    elif ext in [".set", ".edf", ".bdf"]:
+        raw = None
+        if ext == ".set":
+            raw = mne.io.read_raw_eeglab(file, preload=True)
+        elif ext == ".edf":
+            raw = mne.io.read_raw_edf(file, preload=True)
+        elif ext == ".bdf":
+            raw = mne.io.read_raw_bdf(file, preload=True)
+        raw.pick_types(eeg=True).filter(0.5, 45).resample(128)
+        data = raw.get_data()
+        for i in range(0, data.shape[1] - 512, 512):
+            vec = data[:, i:i+512].T.flatten()
+            X.append(vec)
+            subj.append(file.name)
+            if len(X) >= topn: break
+    else:
+        st.error("❌ Format non supporté.")
+        return [], []
 
-def send_email_alert(summary, config, zip_path=None):
-    msg = MIMEMultipart()
-    msg['From'] = config["sender_email"]
-    msg['To'] = ", ".join(config["recipients"])
-    msg['Subject'] = f"[NeuroSolve] Alerte cognitive - {summary['session_folder']}"
-    body = f"""
-🧠 Session : {summary['session_folder']}
-Frames : {summary['nb_frames']}
-Alertes : {summary['nb_alerts']} ({summary['alert_rate']*100:.1f}%)
-Durée : {summary['duration_sec']}s
-Prob moy classe 1 : {summary['avg_prob_class_1']}
-    """
-    msg.attach(MIMEText(body, "plain"))
-
-    if zip_path:
-        qr = qrcode.make(f"https://neurosolve.local/sessions/{os.path.basename(zip_path)}")
-        buf = BytesIO()
-        qr.save(buf, format="PNG")
-        buf.seek(0)
-        msg.attach(MIMEImage(buf.read(), name="qr_session.png"))
-
-    try:
-        with smtplib.SMTP(config["smtp_server"], config["smtp_port"]) as server:
-            server.starttls()
-            server.login(config["sender_email"], config["password"])
-            server.send_message(msg)
-        print("📧 Email envoyé avec succès.")
-    except Exception as e:
-        print(f"❌ Échec de l'envoi de l'email : {e}")
+    return np.array(X), subj
 
 # === Features
-def extract_tda_features(x):
+def extract_features(x):
     traj = np.array([x[i:i+3] for i in range(len(x)-3)])
     b1 = ripser(traj)['dgms'][1]
     if len(b1):
-        persistence = max(d - b for b, d in b1)
-        return [persistence, b1[0][0], b1[0][1]]
-    return [0, 0, 0]
+        persistence = max(d-b for b,d in b1)
+        tda = [persistence, b1[0][0], b1[0][1]]
+    else:
+        tda = [0, 0, 0]
 
-def extract_wavelet_features(data, wavelet='db4', level=4):
-    import pywt
-    coeffs = pywt.wavedec(data, wavelet, level=level)
-    arr = pywt.coeffs_to_array(coeffs)[0]
-    return arr.flatten()
+    coeffs = pywt.wavedec(x, 'db4', level=4)
+    wav = pywt.coeffs_to_array(coeffs)[0].flatten()
+    return np.concatenate([tda, wav])
 
-# === Prédiction
-def predict_segment(model, scaler, segment, use_adformer=False):
-    tda_feat = extract_tda_features(segment)
-    wavelet_feat = extract_wavelet_features(segment)
-    full_feat = np.concatenate([tda_feat, wavelet_feat])
-    full_feat = scaler.transform([full_feat])
-
+# === Modèle
+def load_model(use_adformer=False):
     if use_adformer:
-        proba = model.predict(full_feat)[0]  # Tensorflow retourne array
-        pred = int(np.argmax(proba))
+        model = tf.keras.models.load_model(os.path.join(MODEL_DIR, "model_adformer.h5"))
+        scaler = np.load(os.path.join(MODEL_DIR, "model_scaler_adformer.npz"), allow_pickle=True)["scaler"][()]
     else:
-        pred = model.predict(full_feat)[0]
-        proba = model.predict_proba(full_feat)[0]
+        model = pickle.load(open(os.path.join(MODEL_DIR, "model.pkl"), "rb"))
+        scaler = np.load(os.path.join(MODEL_DIR, "model_scaler.npz"), allow_pickle=True)["scaler"][()]
+    return model, scaler
 
-    return pred, proba
+# === Interface Streamlit
+st.set_page_config(page_title="🧠 Importateur EEG & Prédicteur")
+st.title("🧠 NeuroSolve – Prédictions depuis EEG importé")
 
-# === Traitement des fichiers EEG
-def process_eeg_file(file_path, file_type, model, scaler, use_adformer=False):
-    if file_type == 'set':
-        raw = mne.io.read_raw_eeglab(file_path, preload=True)
-    elif file_type == 'edf':
-        raw = mne.io.read_raw_edf(file_path, preload=True)
-    else:
-        st.error("Format de fichier non supporté.")
-        return
+uploaded = st.file_uploader("📂 Importer un fichier EEG (.set, .edf, .bdf, .h5, .json)", type=["set", "edf", "bdf", "h5", "json"])
+model_type = st.selectbox("🧠 Choix du modèle :", ["RandomForest (.pkl)", "AdFormer (.h5)"])
+use_adformer = model_type == "AdFormer (.h5)"
 
-    data, times = raw[:]
+if uploaded and st.button("🚀 Lancer les prédictions"):
+    X, subjects = load_eeg_any(uploaded)
+    if len(X) == 0:
+        st.warning("Aucune donnée valide.")
+        st.stop()
+
+    model, scaler = load_model(use_adformer)
     predictions = []
-    gif_frames = []
 
-    for i in range(0, data.shape[1], 512):  # Supposons des segments de 512 échantillons
-        segment = data[:, i:i+512]
-        if segment.shape[1] < 512:
-            break
-        pred, prob = predict_segment(model, scaler, segment.flatten(), use_adformer)
+    for i, x in enumerate(X):
+        features = extract_features(x)
+        features_scaled = scaler.transform([features])
+        if use_adformer:
+            proba = model.predict(features_scaled)[0]
+            pred = int(np.argmax(proba))
+        else:
+            pred = model.predict(features_scaled)[0]
+            proba = model.predict_proba(features_scaled)[0]
 
+        alert = proba[1] > THRESHOLD
         predictions.append({
-            "time_sec": times[i],
-            "iteration": i // 512,
+            "i": i,
+            "subject": subjects[i],
             "prediction": int(pred),
-            "prob_class_0": float(prob[0]),
-            "prob_class_1": float(prob[1]),
-            "timestamp": time.time(),
-            "subject": "subject_01",
-            "alert": prob[1] > THRESHOLD
+            "prob_class_0": float(proba[0]),
+            "prob_class_1": float(proba[1]),
+            "alert": alert
         })
 
-        if prob[1] > THRESHOLD:
-            playsound(ALERT_SOUND)
+        if i % 5 == 0:
+            shap_explain_live(x, model, scaler)
 
-        if (i // 512) % 5 == 0:
-            shap_explain_live(segment.flatten(), model, scaler)
-
-        # Graph
-        plt.figure(figsize=(6,3))
-        plt.plot(segment.T)
-        plt.title(f"{times[i]:.2f}s - Pred: {pred}")
-        fname = os.path.join(LOG_DIR, f"frame_{i//512:03}.png")
-        plt.savefig(fname)
-        gif_frames.append(fname)
-        plt.close()
-
-    # Export
     df = pd.DataFrame(predictions)
-    df.to_csv(RESULTS_CSV, index=False)
-    with open(JSON_LOG, "w") as f:
-        json.dump(predictions, f, indent=2)
+    st.dataframe(df)
 
-    # GIF
-    import imageio
-    imageio.mimsave(G
-::contentReference[oaicite:2]{index=2}
- 
+    df.to_csv(os.path.join(LOG_DIR, "import_predictions.csv"), index=False)
+    json.dump(predictions, open(os.path.join(LOG_DIR, "import_predictions.json"), "w"), indent=2)
+
+    st.success("✅ Prédictions terminées.")
+    st.metric("Total vecteurs", len(predictions))
+    st.metric("Nb alertes", df["alert"].sum())
+
+    zip_path = shutil.make_archive(LOG_DIR, "zip", LOG_DIR)
+    st.download_button("⬇️ Télécharger session ZIP", open(zip_path, "rb"), file_name=os.path.basename(zip_path), mime="application/zip")
+    st.image(generate_qr_for_zip(zip_path), width=200, caption="🔗 QR session EEG importée")
