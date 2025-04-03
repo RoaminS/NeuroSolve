@@ -29,3 +29,6 @@ requests
 plotly
 qrcode[pil]
 pdfkit
+
+# brew install wkhtmltopdf
+# brew install ffmpeg
