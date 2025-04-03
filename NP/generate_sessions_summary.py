@@ -46,12 +46,26 @@ if not summaries:
 
 df = pd.DataFrame(summaries)
 
+# === Envoyer à l'API
+def push_summary_to_api(csv_path, api_url="http://localhost:6000/upload_summary"):
+    try:
+        with open(csv_path, 'rb') as f:
+            files = {'file': (os.path.basename(csv_path), f)}
+            r = requests.post(api_url, files=files)
+        if r.status_code == 200:
+            print("📡 Résumé envoyé à l’API.")
+        else:
+            print(f"❌ Échec envoi : {r.status_code}")
+    except Exception as e:
+        print(f"⚠️ Erreur d’envoi : {e}")
+
 # ✅ Tri chronologique
 df = df.sort_values("timestamp_generated")
 
 # ✅ Sauvegarde CSV
 df.to_csv(SUMMARY_FILE, index=False)
 print(f"✅ Résumé global sauvegardé : {SUMMARY_FILE}")
+push_summary_to_api(SUMMARY_FILE)
 
 # ✅ Aperçu terminal
 print(df[["session_folder", "nb_frames", "nb_alerts", "alert_rate", "duration_sec", "avg_prob_class_1"]].tail())
