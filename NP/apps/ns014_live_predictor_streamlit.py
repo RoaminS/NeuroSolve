@@ -22,6 +22,7 @@ import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
 from io import BytesIO
+import torch
 import tensorflow as tf
 from datetime import datetime
 from email.mime.text import MIMEText
@@ -37,7 +38,7 @@ from ns015_shap_live import shap_explain_live
 
 # === CONFIGURATION
 MODEL_PATH = "ns013_results/model.pkl"
-USE_ADFORMER = os.path.exists("model_perso/model_adformer.pth")
+USE_ADFORMER = os.path.exists("ns013_results/model_adformer.pth")
 ALERT_SOUND = "assets/alert_sound.mp3"
 WINDOW_SIZE = 512
 FS = 128
@@ -160,12 +161,13 @@ def push_zip_to_api(zip_path, endpoint="http://localhost:6000/upload_session"):
 def live_loop(config=None):
 
     if USE_ADFORMER:
-        model = tf.keras.models.load_model("ns013_results/model_adformer.pth")
+        model = torch.load("ns013_results/model_adformer.pth", map_location=torch.device('cpu'))
+        model.eval()
         scaler = np.load("ns013_results/model_scaler_adformer.npz", allow_pickle=True)["scaler"][()]
     else:
         model = pickle.load(open("ns013_results/model.pkl", "rb"))
         scaler = np.load("ns013_results/model_scaler.npz", allow_pickle=True)["scaler"][()]
-
+            
     predictions = []
     gif_frames = []
 
