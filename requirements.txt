@@ -13,4 +13,16 @@ tqdm
 kaleido
 openpyxl
 streamlit
-# playsound
+pywt
+umap-learn
+ripser
+persim
+h5py
+antropy
+pylsl
+shap
+xgboost
+lightgbm
+pydub
+pydub[ffmpeg]
+playsound
