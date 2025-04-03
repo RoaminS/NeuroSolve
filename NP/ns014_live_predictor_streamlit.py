@@ -225,6 +225,13 @@ def live_loop(config=None):
         "timestamp_generated": datetime.now().isoformat()
     }
 
+    # === Sauvegarde summary.json (pour logs_viewer)
+    summary_json_path = os.path.join(LOG_DIR, "summary.json")
+    with open(summary_json_path, "w") as f:
+        json.dump(summary, f, indent=2)
+    print(f"🧠 Résumé sauvegardé : {summary_json_path}")
+
+
     # Résumé global
     csv_sum = "sessions_summary.csv"
     df_sum = pd.read_csv(csv_sum) if os.path.exists(csv_sum) else pd.DataFrame()
