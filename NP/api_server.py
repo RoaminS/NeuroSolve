@@ -23,5 +23,14 @@ def receive_alert():
     print("📥 Alertes reçues :", len(data["data"]))
     return "Alertes reçues"
 
+
+@app.route('/upload_session', methods=['POST'])
+def upload_session():
+    file = request.files['file']
+    filename = file.filename
+    file.save(f"./uploaded_sessions/{filename}")
+    return {"status": "received", "filename": filename}
+
+
 if __name__ == "__main__":
     app.run(debug=True, port=6000)
