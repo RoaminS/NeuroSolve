@@ -18,6 +18,7 @@ Licence : CC BY-NC-SA 4.0
 import os
 import json
 import shap
+import pickle
 import webbrowser
 import numpy as np
 import pandas as pd
@@ -83,23 +84,50 @@ def run_model(df, wavelets=None):
     y_pred = clf.predict(X_test)
     y_prob = clf.predict_proba(X_test)[:, 1] if len(np.unique(y)) == 2 else None
  
+    # === Export modèle pkl
+    with open(os.path.join(OUTPUT_DIR, "model.pkl"), "wb") as f:
+        pickle.dump(clf, f)
+    print(f"💾 Modèle sauvegardé : {model_path}")
+    np.savez(os.path.join(OUTPUT_DIR, "model_scaler.npz"), scaler=scaler)
+    print("💾 Scaler sauvegardé : model_scaler.npz")
+
+    # === PyTorch MLP
+    class SimpleMLP(nn.Module):
+        def __init__(self, input_size, hidden=64, output_size=2):
+            super().__init__()
+            self.net = nn.Sequential(
+                nn.Linear(input_size, hidden),
+                nn.ReLU(),
+                nn.Linear(hidden, output_size)
+            )
+
+        def forward(self, x):
+            return self.net(x)
+
+    model = SimpleMLP(input_size=X.shape[1])
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    loss_fn = nn.CrossEntropyLoss()
+    X_tensor = torch.tensor(X_train, dtype=torch.float32)
+    y_tensor = torch.tensor(y_train, dtype=torch.long)
+
+    for epoch in range(20):
+        model.train()
+        optimizer.zero_grad()
+        output = model(X_tensor)
+        loss = loss_fn(output, y_tensor)
+        loss.backward()
+        optimizer.step()
+
+    torch.save(model, os.path.join(OUTPUT_DIR, "model_adformer.pth"))
+    np.savez(os.path.join(OUTPUT_DIR, "model_scaler_adformer.npz"), scaler=scaler)
+    print("💾 Scaler sauvegardé : model_scaler_adformer.npz")
+
 
     models = {
         "RandomForest": RandomForestClassifier(n_estimators=150, random_state=0),
         "XGBoost": XGBClassifier(use_label_encoder=False, eval_metric='logloss'),
         "LightGBM": LGBMClassifier()
     }
-
-        # === Sauvegarde du modèle entraîné
-    import pickle
-    model_path = os.path.join(OUTPUT_DIR, "model.pkl")
-    with open(model_path, "wb") as f:
-        pickle.dump(clf, f)
-    print(f"💾 Modèle sauvegardé : {model_path}")
-
-    # === Sauvegarde du scaler
-    np.savez(os.path.join(OUTPUT_DIR, "model_scaler.npz"), scaler=scaler)
-    print("💾 Scaler sauvegardé : model_scaler.npz")
 
 
     scores = []
