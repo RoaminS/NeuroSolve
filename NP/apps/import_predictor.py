@@ -149,6 +149,55 @@ if uploaded and st.button("🚀 Lancer les prédictions"):
     df = pd.DataFrame(predictions)
     st.dataframe(df)
 
+    # === Générer summary.json
+    summary = {
+        "session_folder": os.path.basename(LOG_DIR),
+        "nb_vectors": len(predictions),
+        "nb_alerts": int(df["alert"].sum()),
+        "alert_rate": round(df["alert"].mean(), 3),
+        "timestamp_generated": datetime.now().isoformat()
+    }
+    json.dump(summary, open(os.path.join(LOG_DIR, "summary.json"), "w"), indent=2)
+    st.info("📄 Résumé JSON sauvegardé : summary.json")
+
+    # === Mise à jour sessions_summary.csv
+    summary_csv_path = "sessions_summary.csv"
+    df_sum = pd.read_csv(summary_csv_path) if os.path.exists(summary_csv_path) else pd.DataFrame()
+    df_sum = pd.concat([df_sum, pd.DataFrame([summary])], ignore_index=True)
+    df_sum.to_csv(summary_csv_path, index=False)
+    st.success("📊 sessions_summary.csv mis à jour")
+
+    zip_path = shutil.make_archive(LOG_DIR, "zip", LOG_DIR)
+
+    # === Envoi email automatique
+    send_email = st.checkbox("📬 Envoyer un email si alertes détectées")
+
+    if send_email and summary["nb_alerts"] > 0:
+        from ns014_utils import send_email_alert  # ← ou redéfinir localement
+        config = load_notifier_config()  # même que dans le live
+        if config:
+            send_email_alert(summary, config, zip_path)
+            st.success("📧 Email envoyé (alerte détectée)")
+
+
+    # === Streamlit: réexécution possible ===
+    if "last_uploaded_file" not in st.session_state:
+        st.session_state["last_uploaded_file"] = uploaded
+    
+    if uploaded:
+        st.session_state["last_uploaded_file"] = uploaded    
+
+    if st.session_state["last_uploaded_file"]:
+        if st.button("🔁 Réexécuter la prédiction sur ce fichier"):
+            file = st.session_state["last_uploaded_file"]
+            st.info(f"Réexécution sur : {file.name}")
+            # Recharge les données et relance la prédiction
+            data = load_eeg_file(file)
+            zip_path = run_prediction_pipeline(data, file.name)
+            st.success("✅ Analyse relancée avec succès.")
+            st.image(generate_qr_for_zip(zip_path), width=220)
+
+    
     df.to_csv(os.path.join(LOG_DIR, "import_predictions.csv"), index=False)
     json.dump(predictions, open(os.path.join(LOG_DIR, "import_predictions.json"), "w"), indent=2)
 
