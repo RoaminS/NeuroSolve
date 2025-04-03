@@ -39,7 +39,7 @@ if not sessions:
 selected_session = st.selectbox("🧠 Sélectionne une session :", sessions)
 session_path = os.path.join(LOGS_DIR, selected_session)
 
-def push_session_to_api(zip_path, api_url="http://localhost:5000/upload_session"):
+def push_session_to_api(zip_path, api_url="http://localhost:6000/upload_session"):
     try:
         with open(zip_path, 'rb') as f:
             files = {'file': (os.path.basename(zip_path), f)}
@@ -156,28 +156,31 @@ if summary:
 
 
 # == Zip Session
+zip_path = None  # sera défini plus tard si ZIP cliqué
+
 def zip_session(session_path):
     zip_name = session_path + ".zip"
     shutil.make_archive(session_path, 'zip', session_path)
     st.success(f"📦 Session compressée : {zip_name}")
     return zip_name
 
+
 # === FOOTER
 st.markdown("---")
 st.markdown(f"📂 Session : `{selected_session}`")
 st.markdown("## 📦 Export & API")
-st.markdown("### 🔗 QR Code de partage (placeholder URL)")
-if os.path.exists(zip_path):
-    qr_img = generate_qr_for_session(zip_path)
-    st.image(qr_img, width=200, caption="Scanne pour accéder à la session")
-
 
 # === Bouton ZIP
 if st.button("📁 Créer une archive ZIP de cette session"):
     zip_path = zip_session(session_path)
 
+    # QR code après génération
+    st.markdown("### 🔗 QR Code de partage (placeholder URL)")
+    qr_img = generate_qr_for_session(zip_path)
+    st.image(qr_img, width=200, caption="Scanne pour accéder à la session")
+
 # === Bouton DOWNLOAD ZIP
-if os.path.exists(zip_path):
+if zip_path and os.path.exists(zip_path):
     with open(zip_path, "rb") as f:
         st.download_button(
             label="⬇️ Télécharger la session zippée",
@@ -186,13 +189,12 @@ if os.path.exists(zip_path):
             mime="application/zip"
         )
 
-
 # === Bouton PUSH
-if st.button("📤 Envoyer la session à l’API Flask"):
-    zip_path = session_path + ".zip"
-    if os.path.exists(zip_path):
+if zip_path and os.path.exists(zip_path):
+    if st.button("📤 Envoyer la session à l’API Flask"):
         push_session_to_api(zip_path)
-    else:
-        st.warning("💡 Zipper la session avant de l’envoyer.")
+else:
+    st.warning("💡 Clique sur 'Créer une archive ZIP' avant de télécharger ou d'envoyer.")
+
 
 st.markdown("Made with ❤️ by **Kocupyr Romain** & `multi_gpt_api`")
