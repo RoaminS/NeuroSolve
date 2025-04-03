@@ -17,6 +17,7 @@ import json
 from PIL import Image
 import shutil
 import zipfile
+import requests
 
 
 st.set_page_config(layout="wide", page_title="🧠 NeuroSolve Logs Viewer")
