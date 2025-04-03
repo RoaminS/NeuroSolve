@@ -22,6 +22,7 @@ import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
 from io import BytesIO
+import torch
 import tensorflow as tf
 from datetime import datetime
 from email.mime.text import MIMEText
@@ -37,7 +38,7 @@ from ns015_shap_live import shap_explain_live
 
 # === CONFIGURATION
 MODEL_PATH = "ns013_results/model.pkl"
-USE_ADFORMER = os.path.exists("ns013_results/model_adformer.h5")
+USE_ADFORMER = os.path.exists("ns013_results/model_adformer.pth")
 ALERT_SOUND = "assets/alert_sound.mp3"
 WINDOW_SIZE = 512
 FS = 128
@@ -160,12 +161,13 @@ def push_zip_to_api(zip_path, endpoint="http://localhost:6000/upload_session"):
 def live_loop(config=None):
 
     if USE_ADFORMER:
-        model = tf.keras.models.load_model("ns013_results/model_adformer.h5")
+        model = torch.load("ns013_results/model_adformer.pth", map_location=torch.device('cpu'))
+        model.eval()
         scaler = np.load("ns013_results/model_scaler_adformer.npz", allow_pickle=True)["scaler"][()]
     else:
         model = pickle.load(open("ns013_results/model.pkl", "rb"))
         scaler = np.load("ns013_results/model_scaler.npz", allow_pickle=True)["scaler"][()]
-
+            
     predictions = []
     gif_frames = []
 
@@ -255,8 +257,8 @@ st.set_page_config(page_title="EEG Live Predictor")
 st.title("🧠 NeuroSolve – Prédiction EEG Temps Réel")
 
 # ✅ Choix du modèle par utilisateur
-model_type = st.selectbox("🧠 Choisis le modèle :", ["RandomForest (.pkl)", "AdFormer (.h5)"])
-use_adformer = model_type == "AdFormer (.h5)"
+model_type = st.selectbox("🧠 Choisis le modèle :", ["RandomForest (.pkl)", "AdFormer (.pth)"])
+use_adformer = model_type == "AdFormer (.pth)"
 
 config = load_notifier_config()
 
@@ -275,5 +277,3 @@ if st.button("🧠 Lancer la prédiction EEG (LSL)"):
             file_name=os.path.basename(zip_path),
             mime="application/zip"
         )
-
-
