@@ -21,6 +21,9 @@ import pandas as pd
 import datetime
 import mne
 import time
+import shutil
+import smtplib
+from email.mime.text import MIMEText
 from playsound import playsound
 from pylsl import StreamInlet, resolve_stream
 from ns015_shap_live import shap_explain_live
@@ -28,6 +31,7 @@ import matplotlib.pyplot as plt
 from scipy.signal import welch
 from ripser import ripser
 from datetime import datetime
+
 
 # === TIME-BASED SESSION DIRECTORY
 timestamp_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -49,6 +53,24 @@ FS = 128
 CHANNEL = "Cz"
 PREDICTION_INTERVAL = 2  # sec
 THRESHOLD = 0.85  # Seuil d’alerte cognitive (proba classe 1)
+
+EMAIL_SENDERS = {
+    "from": "neurosolve@yourdomain.com", # à modifier fictif
+    "password": "motdepasse_app" # à modifier fictif
+}
+
+EMAIL_RECIPIENTS = [
+    "kocupyr@example.com", # à modifier fictif
+    "clinique@example.com" # à modifier fictif
+]
+
+PHONE_NUMBERS = [
+    "+33612345678", # à modifier fictif
+    "+33765432109" # à modifier fictif
+]
+
+SMTP_SERVER = "smtp.yourprovider.com" # à modifier fictif
+SMTP_PORT = 587 # à modifier fictif
 
 
 # === Fonctions de features (ondelettes + TDA)
@@ -190,31 +212,79 @@ def live_loop(mode="lsl", gui=False, save_gif=False):
         print(f"🎞️ GIF prédictif généré : {GIF_FILE}")
         for f in gif_frames: os.remove(f)
 
+    # === ARCHIVAGE SUMMARY GLOBAL
+    summary_data = {
+        "session_folder": os.path.basename(LOG_DIR),
+        "nb_frames": len(predictions),
+        "nb_alerts": sum(1 for p in predictions if p.get("alert")),
+        "alert_rate": round(sum(1 for p in predictions if p.get("alert")) / len(predictions), 3),
+        "duration_sec": round(predictions[-1]["time_sec"] - predictions[0]["time_sec"], 2) if len(predictions) > 1 else 0,
+        "avg_prob_class_1": round(np.mean([p["prob_class_1"] for p in predictions]), 3),
+        "timestamp_generated": datetime.datetime.now().isoformat()
+    }
+    
+    # == Envoi
+    def send_email_alert(summary, zip_path=None):
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.image import MIMEImage
 
-# === MAIN
+    subject = f"[NeuroSolve] Alerte cognitive détectée - {summary['session_folder']}"
+    body = f"""
+    Une session EEG a déclenché une alerte cognitive.  
+    Session : {summary['session_folder']}  
+    Frames : {summary['nb_frames']}  
+    Alertes : {summary['nb_alerts']} ({summary['alert_rate']*100:.1f}%)  
+    Durée : {summary['duration_sec']}s  
+    Prob. moyenne classe 1 : {summary['avg_prob_class_1']}  
+    """
 
+    msg = MIMEMultipart()
+    msg['From'] = EMAIL_SENDERS["from"]
+    msg['To'] = ", ".join(EMAIL_RECIPIENTS)
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, "plain"))
+
+    # ➕ QR Code joint
+    if zip_path:
+        import qrcode
+        from io import BytesIO
+        qr = qrcode.make(f"https://neurosolve.local/sessions/{os.path.basename(zip_path)}")
+        qr_bytes = BytesIO()
+        qr.save(qr_bytes, format="PNG")
+        qr_bytes.seek(0)
+
+        image = MIMEImage(qr_bytes.read(), name="qr_session.png")
+        image.add_header("Content-ID", "<qr>")
+        msg.attach(image)
+
+    try:
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.starttls()
+            server.login(EMAIL_SENDERS["from"], EMAIL_SENDERS["password"])
+            server.sendmail(EMAIL_SENDERS["from"], EMAIL_RECIPIENTS, msg.as_string())
+        print("📧 Email(s) envoyé(s) avec succès.")
+    except Exception as e:
+        print(f"❌ Erreur envoi email : {e}")
+
+    if summary_data["nb_alerts"] > 0:
+        send_email_alert(summary_data, zip_path)
+
+    summary_df = pd.DataFrame([summary_data])
+    summary_csv_path = "sessions_summary.csv"
+    if os.path.exists(summary_csv_path):
+        prev = pd.read_csv(summary_csv_path)
+        summary_df = pd.concat([prev, summary_df], ignore_index=True)
+    summary_df.to_csv(summary_csv_path, index=False)
+    print("📦 Résumé global mis à jour automatiquement : sessions_summary.csv")
+
+    # === ZIP AUTOMATIQUE DE LA SESSION
+    zip_path = LOG_DIR + ".zip"
+    shutil.make_archive(LOG_DIR, 'zip', LOG_DIR)
+    print(f"📦 Session zippée automatiquement : {zip_path}")
+
+
+# === MAIN ===
 if __name__ == "__main__":
     live_loop(mode="lsl", gui=False, save_gif=True)  # ← ou Streamlit avec gui=True
     print(f"\n📁 Session complète sauvegardée dans : {LOG_DIR}")
-
-
-# === ARCHIVAGE SUMMARY GLOBAL
-summary_data = {
-    "session_folder": os.path.basename(LOG_DIR),
-    "nb_frames": len(predictions),
-    "nb_alerts": sum(1 for p in predictions if p.get("alert")),
-    "alert_rate": round(sum(1 for p in predictions if p.get("alert")) / len(predictions), 3),
-    "duration_sec": round(predictions[-1]["time_sec"] - predictions[0]["time_sec"], 2) if len(predictions) > 1 else 0,
-    "avg_prob_class_1": round(np.mean([p["prob_class_1"] for p in predictions]), 3),
-    "timestamp_generated": datetime.datetime.now().isoformat()
-}
-
-summary_df = pd.DataFrame([summary_data])
-summary_csv_path = "sessions_summary.csv"
-if os.path.exists(summary_csv_path):
-    prev = pd.read_csv(summary_csv_path)
-    summary_df = pd.concat([prev, summary_df], ignore_index=True)
-summary_df.to_csv(summary_csv_path, index=False)
-print("📦 Résumé global mis à jour automatiquement : sessions_summary.csv")
-
-
+    
