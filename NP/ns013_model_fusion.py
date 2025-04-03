@@ -87,7 +87,7 @@ def run_model(df, wavelets=None):
     # === Export modèle pkl
     with open(os.path.join(OUTPUT_DIR, "model.pkl"), "wb") as f:
         pickle.dump(clf, f)
-    print(f"💾 Modèle sauvegardé : {model_path}")
+    print(f"💾 Modèle sauvegardé : model.pkl")
     np.savez(os.path.join(OUTPUT_DIR, "model_scaler.npz"), scaler=scaler)
     print("💾 Scaler sauvegardé : model_scaler.npz")
 
