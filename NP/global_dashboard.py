@@ -9,6 +9,7 @@ Auteurs :
 
 import plotly.express as px
 import plotly.graph_objects as go
+import pdfkit
 
 st.markdown("---")
 st.markdown("### 📊 Corrélations inter-sessions")
@@ -56,3 +57,11 @@ if os.path.exists(GLOBAL_SUMMARY):
 
 else:
     st.warning("Le fichier `sessions_summary.csv` n’existe pas encore.")
+
+    df_global["status"] = df_global["alert_rate"].apply(lambda x: "🟥 Anormale" if x > 0.3 else "🟩 Normale")
+    st.markdown("### 🧠 Sessions annotées")
+    st.dataframe(df_global[["session_folder", "alert_rate", "status"]])
+
+
+pdfkit.from_file("sessions_summary_plot.html", "summary_report.pdf")
+print("📥 Rapport PDF généré : summary_report.pdf")
