@@ -27,3 +27,4 @@ pydub>=0.25.1
 playsound==1.2.2            # 🎧 Compatible et simple
 requests
 plotly
+qrcode[pil]
