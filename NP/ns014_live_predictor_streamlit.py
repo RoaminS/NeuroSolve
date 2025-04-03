@@ -179,7 +179,7 @@ def live_loop(config=None):
 
         # Graph
         plt.figure(figsize=(6,3))
-        plt.plot(x)
+        plt.plot(segment)
         plt.title(f"{t}s - Pred: {pred}")
         fname = os.path.join(LOG_DIR, f"frame_{i:03}.png")
         plt.savefig(fname)
@@ -235,3 +235,6 @@ if st.button("🧠 Lancer la prédiction EEG (LSL)"):
         zip_path = live_loop(config=config)
     st.success("✅ Session terminée")
     st.image(generate_qr_for_zip(zip_path), width=220)
+    st.markdown("### 🔗 QR Code session")
+    st.image(generate_qr_for_zip(zip_path), width=220, caption="Scanne pour voir la session EEG 🧠")
+
