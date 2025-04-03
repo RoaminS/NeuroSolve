@@ -22,6 +22,7 @@ modules.sort()
 # Mapping clean
 module_labels = {
     "ns014_live_predictor_streamlit.py": "🎯 Live Prédiction EEG",
+    "📦 EEG Import & Prédiction": "apps/import_predictor.py",  
     "logs_viewer.py": "📁 Visualiseur de sessions",
     "global_dashboard.py": "🌍 Dashboard Global",
     "generate_sessions_summary.py": "🧱 Résumé Cross-Session",
