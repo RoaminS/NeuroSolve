@@ -258,11 +258,11 @@ if st.button("🧠 Lancer la prédiction EEG (LSL)"):
     st.image(generate_qr_for_zip(zip_path), width=220, caption="Scanne pour voir la session EEG 🧠")
 
     with open(zip_path, "rb") as f:
-    st.download_button(
-        label="⬇️ Télécharger le ZIP de la session",
-        data=f,
-        file_name=os.path.basename(zip_path),
-        mime="application/zip"
-    )
+        st.download_button(
+            label="⬇️ Télécharger le ZIP de la session",
+            data=f,
+            file_name=os.path.basename(zip_path),
+            mime="application/zip"
+        )
 
 
