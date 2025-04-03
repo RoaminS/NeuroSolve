@@ -145,6 +145,7 @@ if uploaded and st.button("🚀 Lancer les prédictions"):
 
         if i % 5 == 0:
             shap_explain_live(x, model, scaler)
+            plt.savefig(os.path.join(LOG_DIR, "shap_live_frame.png"))
 
     df = pd.DataFrame(predictions)
     st.dataframe(df)
