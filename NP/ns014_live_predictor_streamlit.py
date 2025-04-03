@@ -247,11 +247,15 @@ def live_loop(config=None):
 st.set_page_config(page_title="EEG Live Predictor")
 st.title("🧠 NeuroSolve – Prédiction EEG Temps Réel")
 
+# ✅ Choix du modèle par utilisateur
+model_type = st.selectbox("🧠 Choisis le modèle :", ["RandomForest (.pkl)", "AdFormer (.h5)"])
+use_adformer = model_type == "AdFormer (.h5)"
+
 config = load_notifier_config()
 
 if st.button("🧠 Lancer la prédiction EEG (LSL)"):
     with st.spinner("Analyse en cours..."):
-        zip_path = live_loop(config=config)
+        zip_path = live_loop(config=config, use_adformer=use_adformer)
     st.success("✅ Session terminée")
     st.image(generate_qr_for_zip(zip_path), width=220)
     st.markdown("### 🔗 QR Code session")
