@@ -17,6 +17,7 @@ Dev    : multi_gpt_api
 import os
 import json
 import pandas as pd
+import plotly.express as px
 
 LOGS_DIR = "logs"
 SUMMARY_FILE = "sessions_summary.csv"
@@ -54,3 +55,18 @@ print(f"✅ Résumé global sauvegardé : {SUMMARY_FILE}")
 
 # ✅ Aperçu terminal
 print(df[["session_folder", "nb_frames", "nb_alerts", "alert_rate", "duration_sec", "avg_prob_class_1"]].tail())
+
+
+# === VISU GLOBALE
+plot_path = "sessions_summary_plot.html"
+fig = px.bar(
+    df,
+    x="session",
+    y="alert_rate",
+    title="📊 Taux d’alertes par session EEG",
+    labels={"alert_rate": "Taux d’alerte"},
+    hover_data=["nb_alerts", "nb_frames", "duration_sec"]
+)
+fig.write_html(plot_path)
+print(f"✅ Graphe global sauvegardé : {plot_path}")
+
