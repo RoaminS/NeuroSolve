@@ -22,6 +22,7 @@ import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
 from io import BytesIO
+import tensorflow as tf
 from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -36,6 +37,7 @@ from ns015_shap_live import shap_explain_live
 
 # === CONFIGURATION
 MODEL_PATH = "ns013_results/model.pkl"
+USE_ADFORMER = os.path.exists("ns013_results/model_adformer.h5")
 ALERT_SOUND = "assets/alert_sound.mp3"
 WINDOW_SIZE = 512
 FS = 128
@@ -48,6 +50,7 @@ os.makedirs(LOG_DIR, exist_ok=True)
 RESULTS_CSV = os.path.join(LOG_DIR, f"ns014_predictions_{timestamp_str}.csv")
 JSON_LOG = os.path.join(LOG_DIR, "predictions_log.json")
 GIF_FILE = os.path.join(LOG_DIR, "prediction_live.gif")
+
 
 # === QR Code
 def generate_qr_for_zip(zip_path):
@@ -122,23 +125,40 @@ def extract_wavelet_features(data, wavelet='db4', level=4):
     return arr.flatten()
 
 # === Prédiction
-def predict_segment(model, scaler, segment):
-    tda = extract_tda_features(segment)
-    wav = extract_wavelet_features(segment)
-    features = scaler.transform([np.concatenate([tda, wav])])
-    return model.predict(features)[0], model.predict_proba(features)[0]
+def predict_segment(model, scaler, segment, use_adformer=False):
+    tda_feat = extract_tda_features(segment)
+    wavelet_feat = extract_wavelet_features(segment)
+    full_feat = np.concatenate([tda_feat, wavelet_feat])
+    full_feat = scaler.transform([full_feat])
+
+    if use_adformer:
+        proba = model.predict(full_feat)[0]  # Tensorflow retourne array
+        pred = int(np.argmax(proba))
+    else:
+        pred = model.predict(full_feat)[0]
+        proba = model.predict_proba(full_feat)[0]
+
+    return pred, proba
+
 
 # === LIVE LOOP
 def live_loop(config=None):
-    model = pickle.load(open(MODEL_PATH, "rb"))
-    scaler = np.load("ns013_results/model_scaler.npz", allow_pickle=True)["scaler"][()]
+
+    if USE_ADFORMER:
+        model = tf.keras.models.load_model("ns013_results/model_adformer.h5")
+        scaler = np.load("ns013_results/model_scaler_adformer.npz", allow_pickle=True)["scaler"][()]
+else:
+        model = pickle.load(open("ns013_results/model.pkl", "rb"))
+        scaler = np.load("ns013_results/model_scaler.npz", allow_pickle=True)["scaler"][()]
+
     predictions = []
     gif_frames = []
 
     for i in range(20):
-        x = get_lsl_segment()
         t = round(i * 2, 2)
-        pred, prob = predict_segment(model, scaler, x)
+        segment = get_lsl_segment()
+        pred, prob = predict_segment(model, scaler, segment, use_adformer)
+
 
         predictions.append({
             "time_sec": t,
@@ -155,7 +175,7 @@ def live_loop(config=None):
             playsound(ALERT_SOUND)
 
         if i % 5 == 0:
-            shap_explain_live(x, model, scaler)
+            shap_explain_live(segment, model, scaler)
 
         # Graph
         plt.figure(figsize=(6,3))
