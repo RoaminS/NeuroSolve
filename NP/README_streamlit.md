@@ -16,7 +16,7 @@ Un système visuel complet pour **analyser, interpréter et surveiller** les pr�
 ✅ Affichage temps réel :
 - 🎞️ GIF EEG (`prediction_live.gif`)
 - 🔍 Interprétation SHAP (`shap_live_frame.png`)
-- 📊 Table des prédictions EEG (`ns020_predictions.csv`)
+- 📊 Table des prédictions EEG (`ns014_predictions.csv`)
 - ⚠️ Alertes déclenchées (`alerts_detected.json`)
 
 ✅ Interaction :
