@@ -19,11 +19,13 @@ import os
 import json
 import shap
 import pickle
+import torch
 import webbrowser
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+from datetime import datetime
 from xgboost import XGBClassifier
 from lightgbm import LGBMClassifier
 
@@ -118,10 +120,14 @@ def run_model(df, wavelets=None):
         loss.backward()
         optimizer.step()
 
-    torch.save(model, os.path.join(OUTPUT_DIR, "model_adformer.pth"))
-    np.savez(os.path.join(OUTPUT_DIR, "model_scaler_adformer.npz"), scaler=scaler)
+    # === Sauvegarde versionnée du modèle AdFormer (PyTorch)
+    model_dir = os.path.join(OUTPUT_DIR, f"model_adformer_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
+    os.makedirs(model_dir, exist_ok=True)
+    
+    torch.save(model, os.path.join(model_dir, "model_adformer.pth"))
+    np.savez(os.path.join(model_dir, "model_scaler_adformer.npz"), scaler=scaler)
     print("💾 Scaler sauvegardé : model_scaler_adformer.npz")
-
+    print(f"💾 Modèle AdFormer sauvegardé dans : {model_dir}")
 
     models = {
         "RandomForest": RandomForestClassifier(n_estimators=150, random_state=0),
