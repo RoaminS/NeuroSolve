@@ -23,6 +23,9 @@ import mne
 import time
 import shutil
 import smtplib
+import qrcode
+import streamlit as st
+from io import BytesIO
 from email.mime.text import MIMEText
 from playsound import playsound
 from pylsl import StreamInlet, resolve_stream
@@ -54,6 +57,7 @@ CHANNEL = "Cz"
 PREDICTION_INTERVAL = 2  # sec
 THRESHOLD = 0.85  # Seuil d’alerte cognitive (proba classe 1)
 
+# === Chargement configuration email
 def load_notifier_config(path="notifier_config.json"):
     if not os.path.exists(path):
         st.error("❌ notifier_config.json introuvable.")
@@ -61,6 +65,53 @@ def load_notifier_config(path="notifier_config.json"):
     with open(path) as f:
         return json.load(f)
 
+# === QR code
+def generate_qr_for_zip(zip_path):
+    placeholder_url = f"https://neurosolve.local/sessions/{os.path.basename(zip_path)}"
+    qr = qrcode.make(placeholder_url)
+    buffer = BytesIO()
+    qr.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+# === Envoi Email ==
+def send_email_alert(summary, config, zip_path=None):
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.image import MIMEImage
+
+    body = f"""
+    Une session EEG a déclenché une alerte cognitive.  
+    Session : {summary['session_folder']}  
+    Frames : {summary['nb_frames']}  
+    Alertes : {summary['nb_alerts']} ({summary['alert_rate']*100:.1f}%)  
+    Durée : {summary['duration_sec']}s  
+    Prob. moyenne classe 1 : {summary['avg_prob_class_1']}  
+    """
+
+    msg = MIMEMultipart()
+    msg['From'] = config["sender_email"]
+    msg['To'] = ", ".join(config["recipients"])
+    msg['Subject'] = f"[NeuroSolve] Alerte cognitive - {summary['session_folder']}"
+    msg.attach(MIMEText(body, "plain"))
+
+    # QR si dispo
+    if zip_path:
+        qr = qrcode.make(f"https://neurosolve.local/sessions/{os.path.basename(zip_path)}")
+        buf = BytesIO()
+        qr.save(buf, format="PNG")
+        buf.seek(0)
+        msg.attach(MIMEImage(buf.read(), name="qr_session.png"))
+
+    try:
+        with smtplib.SMTP(config["smtp_server"], config["smtp_port"]) as server:
+            server.starttls()
+            server.login(config["sender_email"], config["password"])
+            server.send_message(msg)
+            print("📧 Email envoyé avec succès.")
+    except Exception as e:
+        print(f"❌ Erreur email : {e}")
+
+    if summary_data["nb_alerts"] > 0:
+        send_email_alert(summary_data, config, zip_path)
 
 # === Fonctions de features (ondelettes + TDA)
 def extract_wavelet_features(data, wavelet='db4', level=4):
@@ -212,26 +263,6 @@ def live_loop(mode="lsl", gui=False, save_gif=False):
         "timestamp_generated": datetime.datetime.now().isoformat()
     }
     
-    # == Envoi
-    def send_email_alert(summary, zip_path=None):
-    from email.mime.multipart import MIMEMultipart
-    from email.mime.image import MIMEImage
-
-    subject = f"[NeuroSolve] Alerte cognitive détectée - {summary['session_folder']}"
-    body = f"""
-    Une session EEG a déclenché une alerte cognitive.  
-    Session : {summary['session_folder']}  
-    Frames : {summary['nb_frames']}  
-    Alertes : {summary['nb_alerts']} ({summary['alert_rate']*100:.1f}%)  
-    Durée : {summary['duration_sec']}s  
-    Prob. moyenne classe 1 : {summary['avg_prob_class_1']}  
-    """
-
-    msg = MIMEMultipart()
-    msg['From'] = EMAIL_SENDERS["from"]
-    msg['To'] = ", ".join(EMAIL_RECIPIENTS)
-    msg['Subject'] = subject
-    msg.attach(MIMEText(body, "plain"))
 
     # ➕ QR Code joint
     if zip_path:
@@ -256,8 +287,9 @@ def live_loop(mode="lsl", gui=False, save_gif=False):
         print(f"❌ Erreur envoi email : {e}")
 
     if summary_data["nb_alerts"] > 0:
-        send_email_alert(summary_data, zip_path)
+        send_email_alert(summary_data, config, zip_path)
 
+    
     summary_df = pd.DataFrame([summary_data])
     summary_csv_path = "sessions_summary.csv"
     if os.path.exists(summary_csv_path):
@@ -270,10 +302,27 @@ def live_loop(mode="lsl", gui=False, save_gif=False):
     zip_path = LOG_DIR + ".zip"
     shutil.make_archive(LOG_DIR, 'zip', LOG_DIR)
     print(f"📦 Session zippée automatiquement : {zip_path}")
+    return zip_path
+        zip_path = live_loop(mode="lsl", gui=True, save_gif=True)
 
 
-# === MAIN ===
-if __name__ == "__main__":
-    live_loop(mode="lsl", gui=False, save_gif=True)  # ← ou Streamlit avec gui=True
-    print(f"\n📁 Session complète sauvegardée dans : {LOG_DIR}")
-    
+
+def generate_qr_for_zip(zip_path):
+    placeholder_url = f"https://neurosolve.local/sessions/{os.path.basename(zip_path)}"
+    qr = qrcode.make(placeholder_url)
+    buffer = BytesIO()
+    qr.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+config = load_notifier_config()
+
+if st.button("🧠 Lancer la Prédiction EEG Live"):
+    with st.spinner("Acquisition en cours..."):
+        zip_path = live_loop(mode="lsl", gui=True, save_gif=True)  # tu dois retourner zip_path
+
+    if zip_path:
+        st.success("✅ Session terminée avec succès.")
+        st.markdown("### 🔗 QR Code de la session")
+        st.image(generate_qr_for_zip(zip_path), width=220)
+
