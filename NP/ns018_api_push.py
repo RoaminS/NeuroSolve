@@ -9,6 +9,8 @@ ns018_api_push.py
 ✅ Requête POST sécurisée + affichage réponse serveur
 
 Auteur : Kocupyr Romain
+Dev    : multi_gpt_api
+Licence : CC BY-NC-SA 4.0
 """
 
 import json
