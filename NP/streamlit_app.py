@@ -24,6 +24,32 @@ import numpy as np
 import json
 import os
 from PIL import Image
+import requests
+
+# Configuration des endpoints API
+API_PRED = "http://localhost:5000/receive_prediction"
+API_ALERT = "http://localhost:5000/receive_alert"
+
+if os.path.exists(json_path) and os.path.exists(alert_path):
+    if st.button("📤 Push vers l'API Flask"):
+        push_to_api(json_path, alert_path, API_PRED, API_ALERT)
+
+
+def push_to_api(predictions_path, alerts_path, endpoint_pred, endpoint_alert):
+    with open(predictions_path) as f:
+        predictions = json.load(f)
+
+    with open(alerts_path) as f:
+        alerts = json.load(f)
+
+    st.info("📡 Envoi des données vers l'API...")
+
+    r_pred = requests.post(endpoint_pred, json={"data": predictions})
+    r_alert = requests.post(endpoint_alert, json={"data": alerts})
+
+    st.success(f"✅ Prédictions envoyées ({r_pred.status_code})")
+    st.success(f"✅ Alertes envoyées ({r_alert.status_code})")
+
 
 st.set_page_config(layout="wide", page_title="NeuroSolve Streamlit UI")
 
