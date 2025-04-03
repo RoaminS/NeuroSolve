@@ -147,7 +147,7 @@ def live_loop(config=None):
     if USE_ADFORMER:
         model = tf.keras.models.load_model("ns013_results/model_adformer.h5")
         scaler = np.load("ns013_results/model_scaler_adformer.npz", allow_pickle=True)["scaler"][()]
-else:
+    else:
         model = pickle.load(open("ns013_results/model.pkl", "rb"))
         scaler = np.load("ns013_results/model_scaler.npz", allow_pickle=True)["scaler"][()]
 
