@@ -163,16 +163,13 @@ def push_zip_to_api(zip_path, endpoint="http://localhost:6000/upload_session"):
 # === LIVE LOOP
 def live_loop(config=None, model=None, scaler=None):
 
-    if USE_ADFORMER:
-        model = torch.load("ns013_results/model_adformer.pth", map_location=torch.device('cpu'))
-        model.eval()
-        scaler = np.load("ns013_results/model_scaler_adformer.npz", allow_pickle=True)["scaler"][()]
-    else:
-        model = pickle.load(open("ns013_results/model.pkl", "rb"))
-        scaler = np.load("ns013_results/model_scaler.npz", allow_pickle=True)["scaler"][()]
-            
     predictions = []
     gif_frames = []
+
+    # Vérifie que tout est bien passé
+    if model is None or scaler is None:
+        st.error("⚠️ Modèle ou scaler manquant.")
+        return None
 
     for i in range(20):
         t = round(i * 2, 2)
@@ -245,6 +242,7 @@ def live_loop(config=None, model=None, scaler=None):
     # ZIP
     zip_path = shutil.make_archive(LOG_DIR, 'zip', LOG_DIR)
 
+    
     # Email
     if summary["nb_alerts"] > 0 and config:
         send_email_alert(summary, config, zip_path)
@@ -296,9 +294,10 @@ use_adformer = model_type == "AdFormer (.pth)"
 
 config = load_notifier_config()
 
+
 if st.button("🧠 Lancer la prédiction EEG (LSL)"):
     with st.spinner("Analyse en cours..."):
-        zip_path = live_loop(config=config, use_adformer=use_adformer)
+        zip_path = live_loop(config=config, model=model, scaler=scaler)
     st.success("✅ Session terminée")
     st.image(generate_qr_for_zip(zip_path), width=220)
     st.markdown("### 🔗 QR Code session")
