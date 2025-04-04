@@ -24,6 +24,7 @@ import matplotlib.pyplot as plt
 from io import BytesIO
 import torch
 import tensorflow as tf
+from streamlit_model_selector import select_and_load_model
 from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -51,6 +52,8 @@ os.makedirs(LOG_DIR, exist_ok=True)
 RESULTS_CSV = os.path.join(LOG_DIR, f"ns014_predictions_{timestamp_str}.csv")
 JSON_LOG = os.path.join(LOG_DIR, "predictions_log.json")
 GIF_FILE = os.path.join(LOG_DIR, "prediction_live.gif")
+
+model, scaler, model_name = select_and_load_model()
 
 
 # === QR Code
@@ -158,18 +161,15 @@ def push_zip_to_api(zip_path, endpoint="http://localhost:6000/upload_session"):
 
 
 # === LIVE LOOP
-def live_loop(config=None):
+def live_loop(config=None, model=None, scaler=None):
 
-    if USE_ADFORMER:
-        model = torch.load("ns013_results/model_adformer.pth", map_location=torch.device('cpu'))
-        model.eval()
-        scaler = np.load("ns013_results/model_scaler_adformer.npz", allow_pickle=True)["scaler"][()]
-    else:
-        model = pickle.load(open("ns013_results/model.pkl", "rb"))
-        scaler = np.load("ns013_results/model_scaler.npz", allow_pickle=True)["scaler"][()]
-            
     predictions = []
     gif_frames = []
+
+    # Vérifie que tout est bien passé
+    if model is None or scaler is None:
+        st.error("⚠️ Modèle ou scaler manquant.")
+        return None
 
     for i in range(20):
         t = round(i * 2, 2)
@@ -242,6 +242,7 @@ def live_loop(config=None):
     # ZIP
     zip_path = shutil.make_archive(LOG_DIR, 'zip', LOG_DIR)
 
+    
     # Email
     if summary["nb_alerts"] > 0 and config:
         send_email_alert(summary, config, zip_path)
@@ -256,15 +257,47 @@ def live_loop(config=None):
 st.set_page_config(page_title="EEG Live Predictor")
 st.title("🧠 NeuroSolve – Prédiction EEG Temps Réel")
 
+# === SECTION : Chargement modèle perso (à placer dans Streamlit UI)
+st.markdown("### 📥 Sélection d’un modèle personnel")
+
+model_files = [
+    f for f in os.listdir("ns013_results/model_perso")
+    if f.endswith(".pth")
+]
+
+if not model_files:
+    st.warning("Aucun modèle .pth trouvé dans model_perso/. Ajoute-en un pour commencer.")
+    st.stop()
+
+model_choice = st.selectbox("🧠 Modèle personnalisé :", model_files)
+model_path = os.path.join("ns013_results/model_perso", model_choice)
+
+# Scaler associé
+scaler_path = model_path.replace(".pth", "_scaler.pkl")
+if os.path.exists(scaler_path):
+    import joblib
+    scaler = joblib.load(scaler_path)
+    st.success(f"✅ Scaler trouvé : {os.path.basename(scaler_path)}")
+else:
+    scaler = None
+    st.warning("⚠️ Aucun scaler .pkl associé trouvé. Recommandé pour de bonnes prédictions.")
+
+# Chargement du modèle
+import torch
+model = torch.load(model_path, map_location=torch.device("cpu"))
+model.eval()
+st.success(f"🎯 Modèle {model_choice} chargé avec succès.")
+
 # ✅ Choix du modèle par utilisateur
 model_type = st.selectbox("🧠 Choisis le modèle :", ["RandomForest (.pkl)", "AdFormer (.pth)"])
 use_adformer = model_type == "AdFormer (.pth)"
 
 config = load_notifier_config()
 
+
 if st.button("🧠 Lancer la prédiction EEG (LSL)"):
     with st.spinner("Analyse en cours..."):
-        zip_path = live_loop(config=config, use_adformer=use_adformer)
+        zip_path = live_loop(config=config, model=model, scaler=scaler)
     st.success("✅ Session terminée")
     st.image(generate_qr_for_zip(zip_path), width=220)
     st.markdown("### 🔗 QR Code session")
@@ -277,4 +310,3 @@ if st.button("🧠 Lancer la prédiction EEG (LSL)"):
             file_name=os.path.basename(zip_path),
             mime="application/zip"
         )
-
