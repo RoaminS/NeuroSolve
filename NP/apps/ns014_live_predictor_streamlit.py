@@ -53,7 +53,7 @@ RESULTS_CSV = os.path.join(LOG_DIR, f"ns014_predictions_{timestamp_str}.csv")
 JSON_LOG = os.path.join(LOG_DIR, "predictions_log.json")
 GIF_FILE = os.path.join(LOG_DIR, "prediction_live.gif")
 
-model, scaler, model_name = select_and_load_model()
+model, scaler, model_type, model_path, model_name = select_and_load_model()
 
 
 # === QR Code
