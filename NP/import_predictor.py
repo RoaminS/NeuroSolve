@@ -4,6 +4,8 @@
 """
 import_predictor.py
 
+Licence : Creative Commons BY-NC-SA 4.0
+
 ✅ Import EEG (.set, .edf, .bdf, .h5, .json)
 ✅ Extraction TDA + ondelettes
 ✅ Prédiction avec modèle NS013 (pkl ou AdFormer .h5)
