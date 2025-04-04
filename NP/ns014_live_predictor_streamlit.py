@@ -256,6 +256,37 @@ def live_loop(config=None):
 st.set_page_config(page_title="EEG Live Predictor")
 st.title("🧠 NeuroSolve – Prédiction EEG Temps Réel")
 
+# === SECTION : Chargement modèle perso (à placer dans Streamlit UI)
+st.markdown("### 📥 Sélection d’un modèle personnel")
+
+model_files = [
+    f for f in os.listdir("ns013_results/model_perso")
+    if f.endswith(".pth")
+]
+
+if not model_files:
+    st.warning("Aucun modèle .pth trouvé dans model_perso/. Ajoute-en un pour commencer.")
+    st.stop()
+
+model_choice = st.selectbox("🧠 Modèle personnalisé :", model_files)
+model_path = os.path.join("ns013_results/model_perso", model_choice)
+
+# Scaler associé
+scaler_path = model_path.replace(".pth", "_scaler.pkl")
+if os.path.exists(scaler_path):
+    import joblib
+    scaler = joblib.load(scaler_path)
+    st.success(f"✅ Scaler trouvé : {os.path.basename(scaler_path)}")
+else:
+    scaler = None
+    st.warning("⚠️ Aucun scaler .pkl associé trouvé. Recommandé pour de bonnes prédictions.")
+
+# Chargement du modèle
+import torch
+model = torch.load(model_path, map_location=torch.device("cpu"))
+model.eval()
+st.success(f"🎯 Modèle {model_choice} chargé avec succès.")
+
 # ✅ Choix du modèle par utilisateur
 model_type = st.selectbox("🧠 Choisis le modèle :", ["RandomForest (.pkl)", "AdFormer (.pth)"])
 use_adformer = model_type == "AdFormer (.pth)"
