@@ -16,49 +16,45 @@ import streamlit as st
 import numpy as np
 import joblib
 
-def select_and_load_model():
-    st.markdown("### 🎯 Sélection du modèle NeuroSolve")
+def select_and_load_model(base_path="ns013_results"):
+    st.markdown("### 🧠 Sélection d’un modèle NeuroSolve")
 
-    base_path = "ns013_results"
-    perso_path = os.path.join(base_path, "model_perso")
+    # Recherche récursive
+    model_paths = []
+    for root, _, files in os.walk(base_path):
+        for f in files:
+            if f.endswith((".pth", ".pkl")):
+                model_paths.append(os.path.join(root, f))
 
-    # Regroupe tous les modèles .pkl et .pth
-    all_models = []
-
-    for path in [base_path, perso_path]:
-        for f in os.listdir(path):
-            if f.endswith((".pkl", ".pth")):
-                all_models.append((f, os.path.join(path, f)))
-
-    if not all_models:
-        st.warning("⚠️ Aucun modèle trouvé dans ns013_results/")
+    if not model_paths:
+        st.error("❌ Aucun modèle trouvé dans ns013_results/")
         st.stop()
 
-    # Sélection utilisateur
-    model_names = [f for f, _ in all_models]
-    selected_name = st.selectbox("📂 Modèles disponibles :", model_names)
-    selected_path = [p for f, p in all_models if f == selected_name][0]
+    model_labels = [os.path.relpath(p, base_path) for p in model_paths]
+    selected_label = st.selectbox("📂 Modèle disponible :", model_labels)
+    model_path = os.path.join(base_path, selected_label)
 
-    # Détection du type
-    is_adformer = selected_path.endswith(".pth")
+    is_adformer = model_path.endswith(".pth")
 
-    # Chargement du modèle 
+    # Chargement du modèle
     if is_adformer:
-        model = torch.load(selected_path, map_location=torch.device("cpu"))
+        model = torch.load(model_path, map_location=torch.device("cpu"))
         model.eval()
+        model_type = "AdFormer"
     else:
-        with open(selected_path, "rb") as f:
+        with open(model_path, "rb") as f:
             model = pickle.load(f)
+        model_type = "RandomForest"
 
-    st.success(f"✅ Modèle chargé : `{selected_name}`")
+    st.success(f"✅ Modèle chargé : {selected_label}")
 
-    # Scaler associé
-    scaler_path = selected_path.replace(".pth", "_scaler.pkl").replace(".pkl", "_scaler.pkl")
+    # === Chargement du scaler associé
+    scaler_path = model_path.replace(".pth", "_scaler.pkl").replace(".pkl", "_scaler.pkl")
     if os.path.exists(scaler_path):
         scaler = joblib.load(scaler_path)
         st.info(f"🔧 Scaler trouvé : {os.path.basename(scaler_path)}")
     else:
         scaler = None
-        st.warning("⚠️ Aucun scaler associé trouvé.")
+        st.warning("⚠️ Aucun scaler trouvé associé à ce modèle.")
 
-    return model, scaler, selected_name
+    return model, scaler, model_type, model_path, selected_label
