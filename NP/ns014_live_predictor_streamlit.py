@@ -24,6 +24,7 @@ import matplotlib.pyplot as plt
 from io import BytesIO
 import torch
 import tensorflow as tf
+from streamlit_model_selector import select_and_load_model
 from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -51,6 +52,8 @@ os.makedirs(LOG_DIR, exist_ok=True)
 RESULTS_CSV = os.path.join(LOG_DIR, f"ns014_predictions_{timestamp_str}.csv")
 JSON_LOG = os.path.join(LOG_DIR, "predictions_log.json")
 GIF_FILE = os.path.join(LOG_DIR, "prediction_live.gif")
+
+model, scaler, model_name = select_and_load_model()
 
 
 # === QR Code
@@ -158,7 +161,7 @@ def push_zip_to_api(zip_path, endpoint="http://localhost:6000/upload_session"):
 
 
 # === LIVE LOOP
-def live_loop(config=None):
+def live_loop(config=None, model=None, scaler=None):
 
     if USE_ADFORMER:
         model = torch.load("ns013_results/model_adformer.pth", map_location=torch.device('cpu'))
