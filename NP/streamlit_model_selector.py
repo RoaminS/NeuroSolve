@@ -42,7 +42,7 @@ def select_and_load_model():
     # Détection du type
     is_adformer = selected_path.endswith(".pth")
 
-    # Chargement du modèle
+    # Chargement du modèle 
     if is_adformer:
         model = torch.load(selected_path, map_location=torch.device("cpu"))
         model.eval()
