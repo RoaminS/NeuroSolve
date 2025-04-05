@@ -23,7 +23,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 from io import BytesIO
 import torch
-import tensorflow as tf
+
 from streamlit_model_selector import select_and_load_model
 from datetime import datetime
 from email.mime.text import MIMEText
