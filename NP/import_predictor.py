@@ -4,8 +4,6 @@
 """
 import_predictor.py
 
-Licence : Creative Commons BY-NC-SA 4.0
-
 ✅ Import EEG (.set, .edf, .bdf, .h5, .json)
 ✅ Extraction TDA + ondelettes
 ✅ Prédiction avec modèle NS013 (pkl ou AdFormer .h5)
@@ -26,6 +24,7 @@ import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
 import tensorflow as tf
+from streamlit_model_selector import select_and_load_model
 from datetime import datetime
 from io import BytesIO
 import qrcode
@@ -115,8 +114,10 @@ st.set_page_config(page_title="🧠 Importateur EEG & Prédicteur")
 st.title("🧠 NeuroSolve – Prédictions depuis EEG importé")
 
 uploaded = st.file_uploader("📂 Importer un fichier EEG (.set, .edf, .bdf, .h5, .json)", type=["set", "edf", "bdf", "h5", "json"])
-model_type = st.selectbox("🧠 Choix du modèle :", ["RandomForest (.pkl)", "AdFormer (.pth)"])
-use_adformer = model_type == "AdFormer (.pth)"
+
+# === Sélection du modèle avec UI dynamique
+model, scaler, model_type, model_path, model_name = select_and_load_model()
+use_adformer = model_path.endswith(".pth")
 
 if uploaded and st.button("🚀 Lancer les prédictions"):
     X, subjects = load_eeg_any(uploaded)
