@@ -114,8 +114,10 @@ st.set_page_config(page_title="🧠 Importateur EEG & Prédicteur")
 st.title("🧠 NeuroSolve – Prédictions depuis EEG importé")
 
 uploaded = st.file_uploader("📂 Importer un fichier EEG (.set, .edf, .bdf, .h5, .json)", type=["set", "edf", "bdf", "h5", "json"])
-model_type = st.selectbox("🧠 Choix du modèle :", ["RandomForest (.pkl)", "AdFormer (.pth)"])
-use_adformer = model_type == "AdFormer (.pth)"
+
+# === Sélection du modèle avec UI dynamique
+model, scaler, model_type, model_path, model_name = select_and_load_model()
+use_adformer = model_path.endswith(".pth")
 
 if uploaded and st.button("🚀 Lancer les prédictions"):
     X, subjects = load_eeg_any(uploaded)
