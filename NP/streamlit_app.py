@@ -27,8 +27,8 @@ from PIL import Image
 import requests
 
 # Configuration des endpoints API
-API_PRED = "http://localhost:5000/receive_prediction"
-API_ALERT = "http://localhost:5000/receive_alert"
+API_PRED = "http://localhost:6000/receive_prediction"
+API_ALERT = "http://localhost:6000/receive_alert"
 
 
 def push_to_api(predictions_path, alerts_path, endpoint_pred, endpoint_alert):
