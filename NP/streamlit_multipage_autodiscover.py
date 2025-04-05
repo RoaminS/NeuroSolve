@@ -17,7 +17,7 @@ import os
 st.set_page_config(page_title="🧠 NeuroSolve Suite", layout="wide")
 st.sidebar.title("🧠 Applications NeuroSolve")
 
-APP_FOLDER = "apps"
+APP_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "apps"))
 apps = [f for f in os.listdir(APP_FOLDER) if f.endswith(".py")]
 apps.sort()
 
